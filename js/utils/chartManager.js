@@ -1,41 +1,48 @@
 // js/utils/chartManager.js — Gestor central de gráficos (Chart.js vía Import Map)
 import Chart from 'chart.js';
 
+// js/utils/chartManager.js — Gestor central de gráficos (Chart.js UMD)
 const instances = new Map();
+
+const getChartClass = () => window.Chart || globalThis.Chart;
 
 const cssVar = (name, fallback) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
 function getCanvasContext(canvas) {
   if (!canvas) return null;
+  const ChartClass = getChartClass();
   const id = canvas.id || 'default-canvas';
   if (instances.has(id)) {
     instances.get(id).destroy();
     instances.delete(id);
   }
-  Chart.getChart?.(canvas)?.destroy();
-  return { id, ctx: canvas.getContext('2d') };
+  if (ChartClass?.getChart) {
+    ChartClass.getChart(canvas)?.destroy();
+  }
+  return { id, ctx: canvas.getContext('2d'), ChartClass };
 }
 
-function applyThemeDefaults() {
+function applyThemeDefaults(ChartClass) {
   const text = cssVar('--text', '#0f172a');
-  if (Chart.defaults) {
-    Chart.defaults.color = text;
-    Chart.defaults.font.family = cssVar('--font', 'system-ui, sans-serif');
+  if (ChartClass?.defaults) {
+    ChartClass.defaults.color = text;
+    ChartClass.defaults.font.family = cssVar('--font', 'system-ui, sans-serif');
   }
 }
 
 /** Dona concéntrica: anillo exterior = presupuesto ideal, anillo interior = gasto real. */
 export function renderBudgetChart(canvas, config) {
   if (!canvas) return null;
-  const { id, ctx } = getCanvasContext(canvas);
-  applyThemeDefaults();
+  const { id, ctx, ChartClass } = getCanvasContext(canvas);
+  if (!ChartClass) return null;
+  applyThemeDefaults(ChartClass);
 
   const { labels, colors, ideal, actual, over = [], formatter, idealAsPercent = false } = config;
   const text = cssVar('--text', '#0f172a');
   const surface = cssVar('--surface', '#ffffff');
 
-  const chart = new Chart(ctx, {
+  const chart = new ChartClass(ctx, {
     type: 'doughnut',
     data: {
       labels,
@@ -82,12 +89,13 @@ export function renderBudgetChart(canvas, config) {
 /** Gráfico de líneas: tendencia de ingresos vs. gastos */
 export function renderTrendChart(canvas, config) {
   if (!canvas) return null;
-  const { id, ctx } = getCanvasContext(canvas);
-  applyThemeDefaults();
+  const { id, ctx, ChartClass } = getCanvasContext(canvas);
+  if (!ChartClass) return null;
+  applyThemeDefaults(ChartClass);
 
   const { labels, incomes, expenses, formatter } = config;
 
-  const chart = new Chart(ctx, {
+  const chart = new ChartClass(ctx, {
     type: 'line',
     data: {
       labels,
@@ -142,13 +150,14 @@ export function renderTrendChart(canvas, config) {
 /** Gráfico de dona: desglose de gastos por categoría individual */
 export function renderCategoryDoughnutChart(canvas, config) {
   if (!canvas) return null;
-  const { id, ctx } = getCanvasContext(canvas);
-  applyThemeDefaults();
+  const { id, ctx, ChartClass } = getCanvasContext(canvas);
+  if (!ChartClass) return null;
+  applyThemeDefaults(ChartClass);
 
   const { labels, data, colors, formatter } = config;
   const surface = cssVar('--surface', '#ffffff');
 
-  const chart = new Chart(ctx, {
+  const chart = new ChartClass(ctx, {
     type: 'doughnut',
     data: {
       labels,
