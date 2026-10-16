@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh https://cdn.jsdelivr.net; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Transacciones — Presupuesto 50/30/20</title>
+  <meta name="description" content="Histórico y gestión detallada de transacciones.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0284c7">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="stylesheet" href="./styles/dashboard.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "supabase": "https://esm.sh/@supabase/supabase-js@2.45.4",
+      "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+      "jspdf": "https://esm.sh/jspdf@2.5.2"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="bar">
+      <a class="brand" href="./dashboard.html" aria-label="Panel principal">💰 Presupuesto 50/30/20</a>
+      <nav aria-label="Navegación de la cuenta">
+        <a class="btn ghost small" href="./dashboard.html">📋 Panel</a>
+        <a class="btn primary small" href="./transactions.html" aria-current="page">📝 Transacciones</a>
+        <a class="btn ghost small" href="./analytics.html">📊 Análisis</a>
+        <button class="btn icon ghost" id="btn-lock-now" type="button" aria-label="Bloquear pantalla" title="Bloquear pantalla ahora">🔒</button>
+        <button class="btn icon ghost" id="btn-security-settings" type="button" aria-label="Ajustes de PIN y Biometría" title="Seguridad y PIN">⚙️</button>
+        <button class="btn small success" id="btn-install-pwa" type="button" hidden>📱 Instalar App</button>
+        <span class="user-email" id="nav-email" aria-live="polite"></span>
+        <button class="btn icon ghost" id="btn-stealth" type="button" aria-pressed="false" aria-label="Activar modo privacidad" title="Modo privacidad">👁️</button>
+        <button class="btn small" id="btn-logout" type="button" aria-label="Cerrar sesión">Cerrar sesión</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="dash-head">
+      <h1>Histórico de Transacciones</h1>
+      <div class="actions no-print">
+        <button class="btn primary" id="btn-add" type="button" aria-label="Agregar transacción">＋ Transacción</button>
+        <button class="btn" id="btn-clone" type="button" aria-label="Copiar gastos recurrentes del mes anterior">🔁 Copiar recurrentes</button>
+        <button class="btn" id="btn-categories" type="button" aria-label="Gestionar mis categorías">🏷️ Categorías</button>
+        <button class="btn" id="btn-csv" type="button" aria-label="Exportar a CSV">CSV</button>
+        <button class="btn" id="btn-pdf" type="button" aria-label="Exportar a PDF">PDF</button>
+      </div>
+    </div>
+
+    <section class="card" aria-labelledby="tx-title">
+      <h2 id="tx-title" class="visually-hidden">Listado Completo</h2>
+
+      <div class="toolbar no-print" role="search" aria-label="Filtros de transacciones">
+        <label for="f-search">Buscar
+          <input id="f-search" type="search" placeholder="Concepto o categoría…" autocomplete="off">
+        </label>
+        <label for="f-rule">Regla 50/30/20
+          <select id="f-rule">
+            <option value="todas">Todas</option>
+            <option value="necesidades">50% Necesidades</option>
+            <option value="deseos">30% Deseos</option>
+            <option value="ahorro">20% Ahorro</option>
+          </select>
+        </label>
+        <label for="f-category">Categoría
+          <select id="f-category">
+            <option value="todas">Todas</option>
+          </select>
+        </label>
+        <label for="f-method">Método de pago
+          <select id="f-method">
+            <option value="todos">Todos</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="debito">Débito</option>
+            <option value="credito">Crédito</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </label>
+        <label for="f-period">Período
+          <select id="f-period">
+            <option value="mes_actual">Mes actual</option>
+            <option value="mes_anterior">Mes anterior</option>
+            <option value="anio">Año completo</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="table-wrap">
+        <table class="tx-table" id="tx-table">
+          <caption class="visually-hidden">Listado de transacciones</caption>
+          <thead>
+            <tr>
+              <th scope="col" data-sort="fecha" tabindex="0" aria-sort="descending">Fecha</th>
+              <th scope="col">Concepto</th>
+              <th scope="col">Regla</th>
+              <th scope="col">Detalle</th>
+              <th scope="col">Pago</th>
+              <th scope="col" class="num" data-sort="monto" tabindex="0">Monto</th>
+              <th scope="col" class="no-print">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tx-body">
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination no-print">
+        <label for="page-size" style="display:inline-flex;align-items:center;gap:.5rem;grid-auto-flow:column">Por página
+          <select id="page-size">
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </select>
+        </label>
+        <span id="page-info" aria-live="polite"></span>
+        <span class="pager">
+          <button class="btn small" id="page-prev" type="button" aria-label="Página anterior">‹ Anterior</button>
+          <button class="btn small" id="page-next" type="button" aria-label="Página siguiente">Siguiente ›</button>
+        </span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><p>Herramienta informativa, no constituye asesoría financiera.</p></footer>
+  <script type="module" src="./js/controllers/transactionsController.js"></script>
+</body>
+</html>
