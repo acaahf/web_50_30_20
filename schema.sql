@@ -61,6 +61,15 @@ create table if not exists public.savings_goals (
   created_at     timestamptz not null default now()
 );
 
+create table if not exists public.debts (
+  id             uuid primary key default gen_random_uuid(),
+  user_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  nombre         text not null check (char_length(btrim(nombre)) > 0),
+  monto_total    numeric(12,2) not null check (monto_total > 0),
+  monto_pagado   numeric(12,2) not null default 0 check (monto_pagado >= 0),
+  created_at     timestamptz not null default now()
+);
+
 -- ---------------------------------------------------------------------
 -- 2. ÍNDICES DE RENDIMIENTO
 -- ---------------------------------------------------------------------
@@ -68,6 +77,7 @@ create index if not exists idx_transactions_user_id on public.transactions (user
 create index if not exists idx_transactions_fecha   on public.transactions (fecha);
 create index if not exists idx_categories_user_id   on public.categories (user_id);
 create index if not exists idx_savings_goals_user   on public.savings_goals (user_id);
+create index if not exists idx_debts_user           on public.debts (user_id);
 
 create unique index if not exists uq_categories_user_nombre
   on public.categories (user_id, lower(btrim(nombre)));
@@ -91,15 +101,10 @@ alter table public.user_profiles enable row level security;
 alter table public.categories    enable row level security;
 alter table public.transactions  enable row level security;
 alter table public.savings_goals enable row level security;
+alter table public.debts          enable row level security;
 
 -- user_profiles
 drop policy if exists "profiles_all_own" on public.user_profiles;
-drop policy if exists "profiles_select_own" on public.user_profiles;
-drop policy if exists "profiles_insert_own" on public.user_profiles;
-drop policy if exists "profiles_update_own" on public.user_profiles;
-drop policy if exists "profiles_delete_own" on public.user_profiles;
-drop policy if exists "Acceso total para dueño de perfil" on public.user_profiles;
-
 create policy "profiles_all_own" on public.user_profiles
   for all to authenticated
   using (auth.uid() = user_id)
@@ -107,12 +112,6 @@ create policy "profiles_all_own" on public.user_profiles
 
 -- categories
 drop policy if exists "cat_all_own" on public.categories;
-drop policy if exists "cat_select_own" on public.categories;
-drop policy if exists "cat_insert_own" on public.categories;
-drop policy if exists "cat_update_own" on public.categories;
-drop policy if exists "cat_delete_own" on public.categories;
-drop policy if exists "Acceso total para dueño de categorias" on public.categories;
-
 create policy "cat_all_own" on public.categories
   for all to authenticated
   using (auth.uid() = user_id)
@@ -120,12 +119,6 @@ create policy "cat_all_own" on public.categories
 
 -- transactions
 drop policy if exists "tx_all_own" on public.transactions;
-drop policy if exists "tx_select_own" on public.transactions;
-drop policy if exists "tx_insert_own" on public.transactions;
-drop policy if exists "tx_update_own" on public.transactions;
-drop policy if exists "tx_delete_own" on public.transactions;
-drop policy if exists "Acceso total para dueño de transacciones" on public.transactions;
-
 create policy "tx_all_own" on public.transactions
   for all to authenticated
   using (auth.uid() = user_id)
@@ -133,13 +126,14 @@ create policy "tx_all_own" on public.transactions
 
 -- savings_goals
 drop policy if exists "goals_all_own" on public.savings_goals;
-drop policy if exists "goals_select_own" on public.savings_goals;
-drop policy if exists "goals_insert_own" on public.savings_goals;
-drop policy if exists "goals_update_own" on public.savings_goals;
-drop policy if exists "goals_delete_own" on public.savings_goals;
-drop policy if exists "Acceso total para dueño de metas" on public.savings_goals;
-
 create policy "goals_all_own" on public.savings_goals
+  for all to authenticated
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- debts
+drop policy if exists "debts_all_own" on public.debts;
+create policy "debts_all_own" on public.debts
   for all to authenticated
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
@@ -195,6 +189,7 @@ begin
   begin alter publication supabase_realtime add table public.user_profiles; exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table public.savings_goals; exception when duplicate_object then null; end;
   begin alter publication supabase_realtime add table public.categories;    exception when duplicate_object then null; end;
+  begin alter publication supabase_realtime add table public.debts;         exception when duplicate_object then null; end;
 end $$;
 
 -- ---------------------------------------------------------------------
