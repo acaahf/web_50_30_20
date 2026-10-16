@@ -1,7 +1,7 @@
-// js/controllers/dashboardController.js — Panel Principal completo con Seguridad y PWA
+// js/controllers/dashboardController.js — Panel Principal (Seguridad y KPIs sin PWA)
 import Swal from 'sweetalert2';
 import { requireAuth } from '../utils/authGuard.js';
-import { signOut, onAuthChange } from '../services/authService.js';
+import { signOut } from '../services/authService.js';
 import * as budget from '../services/budgetService.js';
 import * as catService from '../services/categoryService.js';
 import * as security from '../services/securityService.js';
@@ -39,30 +39,6 @@ const state = {
 };
 
 const fmt = (value) => formatCurrency(value, state.profile.currency);
-
-/* ------------------------------ PWA ------------------------------ */
-let deferredPrompt = null;
-
-function setupPWA() {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
-  }
-  const installBtn = $('#btn-install-pwa');
-  window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    if (installBtn) installBtn.hidden = false;
-  });
-  installBtn?.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted' && installBtn) {
-      installBtn.hidden = true;
-    }
-    deferredPrompt = null;
-  });
-}
 
 /* ------------------------------ Bloqueo y Seguridad ------------------------------ */
 let inactivityTimer = null;
@@ -230,7 +206,7 @@ async function openSecurityModal() {
   });
 }
 
-/* ------------------------------ Cántulos y Render ------------------------------ */
+/* ------------------------------ Cálculos y Render ------------------------------ */
 function computeSummary() {
   const range = getPeriodRange('mes_actual');
   const rows = state.transactions.filter((t) => t.fecha >= range.from && t.fecha <= range.to);
@@ -573,7 +549,6 @@ function wireEvents() {
 
 async function init() {
   initStealthToggle($('#btn-stealth'));
-  setupPWA();
 
   const user = await requireAuth();
   if (!user) return;
