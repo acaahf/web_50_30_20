@@ -61,7 +61,7 @@ const state = {
   onboardingShown: false,
   ui: { ...DEFAULT_UI },
   channel: null,
-  pending: new Set(), // ids eliminados de forma optimista, aún no persistidos
+  pending: new Set(),
   loaded: false,
   unsubAuth: null
 };
@@ -362,7 +362,6 @@ async function loadAll() {
   }
 }
 
-/** Mantiene savings_goals.monto_actual alineado con el ahorro acumulado (mejor esfuerzo). */
 async function syncGoalProgress() {
   const stale = allocateGoals().filter((g) => Math.abs(g.progress - g.monto_actual) >= 0.01);
   if (!stale.length) return;
@@ -449,14 +448,30 @@ async function openTransactionModal(tx = null) {
       };
       tipo.addEventListener('change', toggle);
       toggle();
+
       const detalle = $('#tx-detalle', popup);
       const hint = $('#tx-rule-hint', popup);
       const updateHint = () => {
-        const rule = detalle.selectedOptions[0]?.dataset.rule;
-        hint.textContent = rule ? `Cuenta para: ${RULES[rule].pct}% ${RULES[rule].label}` : '';
+        const selectedOpt = detalle.selectedOptions[0];
+        const rule = selectedOpt?.dataset.rule;
+        const catName = selectedOpt?.value;
+        const catObj = state.categories.find((c) => c.nombre === catName);
+
+        let hintText = rule ? `Cuenta para: ${RULES[rule].pct}% ${RULES[rule].label}` : '';
+        if (catObj?.limite_monto) {
+          const currentMonthRange = getPeriodRange('mes_actual');
+          const monthExpenses = visibleTransactions().filter(
+            (t) => t.tipo === 'gasto' && t.fecha >= currentMonthRange.from && t.fecha <= currentMonthRange.to
+          );
+          const spent = sumMoney(monthExpenses.filter((t) => t.categoria_detalle === catName).map((t) => t.monto));
+          const pct = (spent / catObj.limite_monto) * 100;
+          hintText += ` · Límite: ${fmt(spent)} de ${fmt(catObj.limite_monto)} (${pct.toFixed(0)}%)`;
+        }
+        hint.textContent = hintText;
       };
       detalle.addEventListener('change', updateHint);
       updateHint();
+
       $('#tx-form', popup).addEventListener('submit', (e) => {
         e.preventDefault();
         Swal.clickConfirm();
@@ -638,13 +653,12 @@ async function confirmDeleteGoal(goal) {
   }
 }
 
-/* ------------------------------ Categorías dinámicas ------------------------------ */
+/* ------------------------------ Categorías dinámicas y Límites ------------------------------ */
 const ruleOptions = (selected) =>
   RULE_KEYS.map(
     (k) => `<option value="${k}"${k === selected ? ' selected' : ''}>${RULES[k].pct}% ${escapeHTML(RULES[k].label)}</option>`
   ).join('');
 
-/** <optgroup> por pilar con las categorías reales del usuario (más la categoría eliminada de una transacción en edición). */
 function categoryOptionsHtml(selected, tx = null) {
   const list = state.categories.map((c) => ({ nombre: c.nombre, rule: c.categoria_503020, removed: false }));
   if (tx?.tipo === 'gasto' && tx.categoria_detalle && !list.some((c) => c.nombre === tx.categoria_detalle)) {
@@ -664,7 +678,6 @@ function categoryOptionsHtml(selected, tx = null) {
   }).join('');
 }
 
-/** Filtro de la tabla: lee en tiempo real las categorías del usuario (y las que aún tienen historial). */
 function renderCategoryFilter() {
   const select = $('#f-category');
   const names = new Set(state.categories.map((c) => c.nombre));
@@ -685,13 +698,25 @@ async function openCategoryManager() {
   const ui = { editingId: null, deleteId: null, confirmReset: false, busy: false };
   let root = null;
 
+  const currentMonthRange = getPeriodRange('mes_actual');
+  const monthExpenses = visibleTransactions().filter(
+    (t) => t.tipo === 'gasto' && t.fecha >= currentMonthRange.from && t.fecha <= currentMonthRange.to
+  );
+
+  const getSpent = (catName) =>
+    sumMoney(monthExpenses.filter((t) => t.categoria_detalle === catName).map((t) => t.monto));
+
   const row = (c) => {
     const name = escapeHTML(c.nombre);
     const id = escapeHTML(c.id);
+    const limit = c.limite_monto ? Number(c.limite_monto) : null;
+    const spent = getSpent(c.nombre);
+
     if (ui.editingId === c.id) {
-      return `<li><form class="cat-row editing" data-form="edit" data-id="${id}" novalidate>
-        <input name="nombre" type="text" maxlength="${catService.MAX_NAME_LENGTH}" required value="${name}" aria-label="Nombre de la categoría">
+      return `<li><form class="cat-row editing" data-form="edit" data-id="${id}" novalidate style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap;">
+        <input name="nombre" type="text" maxlength="${catService.MAX_NAME_LENGTH}" required value="${name}" aria-label="Nombre de la categoría" style="flex:1">
         <select name="rule" aria-label="Pilar 50/30/20">${ruleOptions(c.categoria_503020)}</select>
+        <input name="limite_monto" type="number" step="0.01" min="0.01" value="${limit ?? ''}" placeholder="Límite (opcional)" aria-label="Límite máximo de gasto" style="width:130px">
         <button class="btn small success" type="submit" aria-label="Guardar cambios de ${name}">Guardar</button>
         <button class="btn small" type="button" data-cat="cancel" aria-label="Cancelar edición">Cancelar</button>
       </form></li>`;
@@ -703,11 +728,30 @@ async function openCategoryManager() {
           <button class="btn small" type="button" data-cat="cancel">No</button>
         </span></li>`;
     }
-    return `<li class="cat-row"><span class="cat-name">${name}</span>
+
+    let alertBadge = '';
+    if (limit) {
+      const pct = (spent / limit) * 100;
+      const isOver = pct >= 100;
+      const isNear = pct >= 80 && pct < 100;
+      const badgeColor = isOver ? '#dc2626' : isNear ? '#eab308' : '#16a34a';
+      const statusIcon = isOver ? '🚨 Excedido' : isNear ? '⚠️ Cerca del límite' : '🟢 Dentro del tope';
+
+      alertBadge = `<span class="sensitive" style="font-size:0.8rem; padding:0.2rem 0.5rem; border-radius:4px; background:${badgeColor}1a; color:${badgeColor}; font-weight:600;" title="Gastado este mes: ${escapeHTML(fmt(spent))} de ${escapeHTML(fmt(limit))}">
+        ${escapeHTML(fmt(spent))} / ${escapeHTML(fmt(limit))} (${pct.toFixed(0)}%) · ${statusIcon}
+      </span>`;
+    }
+
+    return `<li class="cat-row" style="display:flex; justify-space-between; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+      <div style="display:flex; align-items:center; gap:0.5rem; flex:1; min-width:200px;">
+        <span class="cat-name">${name}</span>
+        ${alertBadge}
+      </div>
       <span class="cat-actions">
         <button class="btn small icon" type="button" data-cat="edit" data-id="${id}" aria-label="Editar categoría ${name}">✏️</button>
         <button class="btn small icon" type="button" data-cat="delete" data-id="${id}" aria-label="Eliminar categoría ${name}">🗑️</button>
-      </span></li>`;
+      </span>
+    </li>`;
   };
 
   const render = () => {
@@ -733,22 +777,23 @@ async function openCategoryManager() {
          </div>
          <p class="hint">Restaurar añade las predeterminadas que falten. Las transacciones existentes conservan su categoría.</p>`;
 
-    root.innerHTML = `<form class="cat-add" data-form="add" novalidate>
-        <input name="nombre" type="text" maxlength="${catService.MAX_NAME_LENGTH}" required placeholder="Nueva categoría (ej. Mascotas)" aria-label="Nombre de la nueva categoría">
+    root.innerHTML = `<form class="cat-add" data-form="add" novalidate style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:1rem;">
+        <input name="nombre" type="text" maxlength="${catService.MAX_NAME_LENGTH}" required placeholder="Nueva categoría (ej. Restaurantes)" aria-label="Nombre de la nueva categoría" style="flex:1; min-width:160px;">
         <select name="rule" aria-label="Pilar 50/30/20 de la nueva categoría">${ruleOptions('necesidades')}</select>
+        <input name="limite_monto" type="number" step="0.01" min="0.01" placeholder="Límite $ (opcional)" aria-label="Límite mensual opcional" style="width:140px;">
         <button class="btn primary small" type="submit">＋ Agregar</button>
       </form>${groups}${footer}`;
     root.querySelector('[data-form="edit"] input')?.focus();
   };
 
   const run = async (task, okMessage) => {
-    if (ui.busy) return; // control de doble envío
+    if (ui.busy) return;
     ui.busy = true;
     root.setAttribute('aria-busy', 'true');
     let ok = false;
     try {
       const result = await task();
-      await loadAll(); // recarga categorías + transacciones (por si hubo renombrado)
+      await loadAll();
       showToast(typeof result === 'string' ? result : okMessage, { type: 'success' });
       ok = true;
     } catch (error) {
@@ -762,11 +807,11 @@ async function openCategoryManager() {
   };
 
   await Swal.fire({
-    title: 'Mis categorías',
+    title: 'Mis categorías y límites de gasto',
     background: 'var(--surface)',
     color: 'var(--text)',
     html: '<div class="cat-manager" id="cat-manager"></div>',
-    width: 700,
+    width: 720,
     confirmButtonText: 'Cerrar',
     didOpen: (popup) => {
       root = $('#cat-manager', popup);
@@ -775,7 +820,11 @@ async function openCategoryManager() {
         e.preventDefault();
         const form = e.target.closest('form');
         const data = new FormData(form);
-        const input = { nombre: data.get('nombre'), categoria_503020: data.get('rule') };
+        const input = {
+          nombre: data.get('nombre'),
+          categoria_503020: data.get('rule'),
+          limite_monto: data.get('limite_monto')
+        };
         if (form.dataset.form === 'add') run(() => catService.createCategory(input), 'Categoría creada');
         if (form.dataset.form === 'edit') run(() => catService.updateCategory(form.dataset.id, input), 'Categoría actualizada');
       });
@@ -826,7 +875,7 @@ async function openCategoryManager() {
 function deleteWithUndo(id) {
   if (!state.transactions.some((t) => t.id === id) || state.pending.has(id)) return;
   state.pending.add(id);
-  renderAll(); // desaparece de inmediato del DOM
+  renderAll();
 
   showToast('Transacción eliminada', {
     type: 'info',
@@ -856,7 +905,6 @@ async function commitDelete(id) {
   }
 }
 
-/** Tras eliminar, el ahorro acumulado puede cambiar: se recalcula desde el servidor. */
 const syncGoalAfterChange = debounce(async () => {
   try {
     state.savingsTotal = await budget.getSavingsTotal();
@@ -992,7 +1040,7 @@ function wireEvents() {
   $('#btn-pdf').addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
       try {
-        const { exportPDF } = await import('../utils/pdfExport.js'); // carga diferida (jsPDF es pesado)
+        const { exportPDF } = await import('../utils/pdfExport.js');
         await exportPDF(buildExportData());
         showToast('PDF generado', { type: 'success' });
       } catch (error) {
@@ -1016,14 +1064,12 @@ function wireEvents() {
 
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => state.loaded && renderChart(computeSummary()));
 
-  // Eliminaciones pendientes: se intentan persistir si el usuario cierra la pestaña
   window.addEventListener('pagehide', () => {
     state.pending.forEach((id) => budget.deleteTransaction(id).catch(() => {}));
     budget.unsubscribe(state.channel);
   });
 }
 
-/** Libera suscripción realtime, gráfico y listeners de sesión. */
 async function teardown() {
   state.unsubAuth?.();
   state.unsubAuth = null;
@@ -1034,12 +1080,11 @@ async function teardown() {
 
 /* ------------------------------ Inicio ------------------------------ */
 async function init() {
-  setupPWA(); // Inicializar PWA e instalador dinámico
+  setupPWA();
   initStealthToggle($('#btn-stealth'));
 
-  // 1. Validar autenticación con el guardián modular
   const user = await requireAuth();
-  if (!user) return; // Si no hay usuario activo, el guardián ya realiza la redirección a index.html
+  if (!user) return;
 
   state.user = user;
   $('#nav-email').textContent = user.email ?? '';
@@ -1055,18 +1100,16 @@ async function init() {
     }
   });
 
-  // 2. Carga de datos autorizados (token adjuntado automáticamente)
   await loadAll();
 
   state.channel = budget.subscribeToChanges(state.user.id, () => scheduleReload());
 
-  // Onboarding: ingreso base en 0 → modal destacado (además del banner)
   if (state.profile.monthly_income <= 0 && !state.onboardingShown) {
     state.onboardingShown = true;
     openIncomeModal({ onboarding: true });
   }
 
-  checkQuickActions(); // Abrir modal automático si la app fue abierta desde el acceso directo PWA
+  checkQuickActions();
 }
 
 init();
