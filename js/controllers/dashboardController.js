@@ -1,4 +1,4 @@
-// js/controllers/dashboardController.js — Panel principal
+// js/controllers/dashboardController.js — Panel principal (Dashboard)
 import Swal from 'sweetalert2';
 import { supabase } from '../supabaseClient.js';
 import { requireAuth } from '../utils/authGuard.js';
@@ -397,21 +397,28 @@ function setKpi(id, { value, cap, left, pct, over }) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.remove('skeleton');
-  $('[data-field="value"]', el).textContent = value;
-  $('[data-field="cap"]', el).textContent = cap;
+  const valEl = $('[data-field="value"]', el);
+  if (valEl) valEl.textContent = value;
+  const capEl = $('[data-field="cap"]', el);
+  if (capEl) capEl.textContent = cap;
   const leftEl = $('[data-field="left"]', el);
-  leftEl.textContent = left;
-  leftEl.classList.toggle('over', over);
+  if (leftEl) {
+    leftEl.textContent = left;
+    leftEl.classList.toggle('over', over);
+  }
 
   const bar = $('.progress', el);
-  const clamped = Math.min(Math.max(pct, 0), 100);
-  bar.style.setProperty('--pct', `${clamped.toFixed(1)}%`);
-  bar.classList.toggle('over', over);
-  bar.setAttribute('aria-valuenow', String(Math.round(clamped)));
+  if (bar) {
+    const clamped = Math.min(Math.max(pct, 0), 100);
+    bar.style.setProperty('--pct', `${clamped.toFixed(1)}%`);
+    bar.classList.toggle('over', over);
+    bar.setAttribute('aria-valuenow', String(Math.round(clamped)));
+  }
 }
 
 function renderKpis(summary) {
-  $('#onboarding').hidden = !summary.locked;
+  const onb = $('#onboarding');
+  if (onb) onb.hidden = !summary.locked;
 
   const incomeBase = summary.income + summary.extraIncome;
   const incomeOver = !summary.locked && summary.totalSpent > incomeBase;
@@ -454,6 +461,7 @@ function renderChart(summary) {
 
 function renderGoals() {
   const list = $('#goals-list');
+  if (!list) return;
   const goals = allocateGoals();
 
   if (!goals.length) {
@@ -552,6 +560,8 @@ function rowHtml(t) {
 }
 
 function renderTable(summary) {
+  const body = $('#tx-body');
+  if (!body) return;
   const rows = filteredRows(summary);
   const { pageSize } = state.ui;
   const pages = Math.max(1, Math.ceil(rows.length / pageSize));
@@ -559,13 +569,16 @@ function renderTable(summary) {
   const start = (state.ui.page - 1) * pageSize;
   const slice = rows.slice(start, start + pageSize);
 
-  $('#tx-body').innerHTML = slice.length
+  body.innerHTML = slice.length
     ? slice.map(rowHtml).join('')
     : '<tr><td colspan="7" class="empty-state">No hay transacciones para los filtros seleccionados.</td></tr>';
 
-  $('#page-info').textContent = `Página ${state.ui.page} de ${pages} · ${rows.length} registro${rows.length === 1 ? '' : 's'}`;
-  $('#page-prev').disabled = state.ui.page <= 1;
-  $('#page-next').disabled = state.ui.page >= pages;
+  const info = $('#page-info');
+  if (info) info.textContent = `Página ${state.ui.page} de ${pages} · ${rows.length} registro${rows.length === 1 ? '' : 's'}`;
+  const prev = $('#page-prev');
+  if (prev) prev.disabled = state.ui.page <= 1;
+  const next = $('#page-next');
+  if (next) next.disabled = state.ui.page >= pages;
 
   document.querySelectorAll('th[data-sort]').forEach((th) => {
     const active = th.dataset.sort === state.ui.sortKey;
@@ -1016,6 +1029,7 @@ function categoryOptionsHtml(selected, tx = null) {
 
 function renderCategoryFilter() {
   const select = $('#f-category');
+  if (!select) return;
   const names = new Set(state.categories.map((c) => c.nombre));
   visibleTransactions().forEach((t) => {
     if (t.tipo === 'gasto') names.add(t.categoria_detalle);
@@ -1270,35 +1284,35 @@ function buildExportData() {
 
 /* ------------------------------ Eventos ------------------------------ */
 function restoreControls() {
-  $('#f-search').value = state.ui.search;
-  $('#f-rule').value = state.ui.rule;
-  $('#f-method').value = state.ui.method;
-  $('#f-period').value = state.ui.period;
-  $('#page-size').value = String(state.ui.pageSize);
+  const searchEl = $('#f-search'); if (searchEl) searchEl.value = state.ui.search;
+  const ruleEl = $('#f-rule'); if (ruleEl) ruleEl.value = state.ui.rule;
+  const methodEl = $('#f-method'); if (methodEl) methodEl.value = state.ui.method;
+  const periodEl = $('#f-period'); if (periodEl) periodEl.value = state.ui.period;
+  const pageSizeEl = $('#page-size'); if (pageSizeEl) pageSizeEl.value = String(state.ui.pageSize);
 }
 
 function wireEvents() {
-  const onFilter = (key, event = 'change') => (e) => {
+  const onFilter = (key) => (e) => {
     state.ui[key] = e.target.value;
     state.ui.page = 1;
     key === 'period' ? renderAll() : renderTable(computeSummary());
   };
 
-  $('#f-search').addEventListener('input', debounce(onFilter('search'), 150));
-  $('#f-rule').addEventListener('change', onFilter('rule'));
-  $('#f-method').addEventListener('change', onFilter('method'));
-  $('#f-category').addEventListener('change', onFilter('category'));
-  $('#f-period').addEventListener('change', onFilter('period'));
-  $('#page-size').addEventListener('change', (e) => {
+  $('#f-search')?.addEventListener('input', debounce(onFilter('search'), 150));
+  $('#f-rule')?.addEventListener('change', onFilter('rule'));
+  $('#f-method')?.addEventListener('change', onFilter('method'));
+  $('#f-category')?.addEventListener('change', onFilter('category'));
+  $('#f-period')?.addEventListener('change', onFilter('period'));
+  $('#page-size')?.addEventListener('change', (e) => {
     state.ui.pageSize = Number(e.target.value);
     state.ui.page = 1;
     renderTable(computeSummary());
   });
-  $('#page-prev').addEventListener('click', () => {
+  $('#page-prev')?.addEventListener('click', () => {
     state.ui.page -= 1;
     renderTable(computeSummary());
   });
-  $('#page-next').addEventListener('click', () => {
+  $('#page-next')?.addEventListener('click', () => {
     state.ui.page += 1;
     renderTable(computeSummary());
   });
@@ -1320,7 +1334,7 @@ function wireEvents() {
     });
   });
 
-  $('#tx-body').addEventListener('click', (e) => {
+  $('#tx-body')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-action]');
     if (!btn) return;
     const id = btn.closest('tr')?.dataset.id;
@@ -1330,7 +1344,7 @@ function wireEvents() {
     if (btn.dataset.action === 'delete') deleteWithUndo(id);
   });
 
-  $('#goals-list').addEventListener('click', (e) => {
+  $('#goals-list')?.addEventListener('click', (e) => {
     const btn = e.target.closest('button[data-goal-action]');
     if (!btn) return;
     const goal = state.goals.find((g) => g.id === btn.closest('.goal')?.dataset.id);
@@ -1339,14 +1353,14 @@ function wireEvents() {
     if (btn.dataset.goalAction === 'delete') confirmDeleteGoal(goal);
   });
 
-  $('#btn-add').addEventListener('click', () => openTransactionModal());
-  $('#btn-goal').addEventListener('click', () => openGoalModal());
-  $('#btn-income').addEventListener('click', () => openIncomeModal());
-  $('#btn-categories').addEventListener('click', () => openCategoryManager());
-  $('#btn-onboard').addEventListener('click', () => openIncomeModal({ onboarding: true }));
+  $('#btn-add')?.addEventListener('click', () => openTransactionModal());
+  $('#btn-goal')?.addEventListener('click', () => openGoalModal());
+  $('#btn-income')?.addEventListener('click', () => openIncomeModal());
+  $('#btn-categories')?.addEventListener('click', () => openCategoryManager());
+  $('#btn-onboard')?.addEventListener('click', () => openIncomeModal({ onboarding: true }));
 
-  $('#btn-lock-now').addEventListener('click', () => triggerLockScreen());
-  $('#btn-security-settings').addEventListener('click', () => openSecurityModal());
+  $('#btn-lock-now')?.addEventListener('click', () => triggerLockScreen());
+  $('#btn-security-settings')?.addEventListener('click', () => openSecurityModal());
 
   $('#btn-debt')?.addEventListener('click', () => openDebtModal());
 
@@ -1359,7 +1373,7 @@ function wireEvents() {
     if (btn.dataset.debtAction === 'delete') confirmDeleteDebt(debt);
   });
 
-  $('#btn-clone').addEventListener('click', (e) =>
+  $('#btn-clone')?.addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
       try {
         const { created, skipped } = await budget.cloneRecurringExpenses();
@@ -1376,7 +1390,7 @@ function wireEvents() {
     })
   );
 
-  $('#btn-csv').addEventListener('click', (e) =>
+  $('#btn-csv')?.addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
       try {
         exportCSV(buildExportData());
@@ -1387,7 +1401,7 @@ function wireEvents() {
     })
   );
 
-  $('#btn-pdf').addEventListener('click', (e) =>
+  $('#btn-pdf')?.addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
       try {
         const { exportPDF } = await import('../utils/pdfExport.js');
@@ -1399,7 +1413,7 @@ function wireEvents() {
     })
   );
 
-  $('#btn-logout').addEventListener('click', (e) =>
+  $('#btn-logout')?.addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
       try {
         await teardown();
@@ -1437,8 +1451,11 @@ async function init() {
   if (!user) return;
 
   state.user = user;
-  $('#nav-email').textContent = user.email ?? '';
-  $('#nav-email').title = user.email ?? '';
+  const navEmail = $('#nav-email');
+  if (navEmail) {
+    navEmail.textContent = user.email ?? '';
+    navEmail.title = user.email ?? '';
+  }
 
   state.ui = sanitizeUi(loadUiState(state.user.id));
   restoreControls();
