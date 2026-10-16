@@ -12,6 +12,7 @@ const num = (v) => Number(v ?? 0);
 
 const normalizeTx = (t) => ({ ...t, monto: num(t.monto) });
 const normalizeGoal = (g) => ({ ...g, monto_objetivo: num(g.monto_objetivo), monto_actual: num(g.monto_actual) });
+const normalizeDebt = (d) => ({ ...d, monto_total: num(d.monto_total), monto_pagado: num(d.monto_pagado) });
 
 /* ------------------------------ Perfil ------------------------------ */
 
@@ -25,7 +26,6 @@ export async function getProfile(userId) {
 
   if (data) return { ...data, monthly_income: num(data.monthly_income) };
 
-  // Respaldo: si el trigger no creó el perfil, se crea aquí
   const created = await supabase
     .from('user_profiles')
     .upsert({ user_id: userId }, { onConflict: 'user_id' })
@@ -50,7 +50,6 @@ export async function updateProfile(userId, { monthly_income, currency }) {
 
 /* --------------------------- Transacciones -------------------------- */
 
-/** Transacciones desde `fromDate` (YYYY-MM-DD), paginadas de 1000 en 1000. */
 export async function listTransactions(fromDate) {
   const all = [];
   for (let offset = 0; ; offset += PAGE) {
@@ -85,7 +84,6 @@ export async function deleteTransaction(id) {
   if (error) fail(error, 'No se pudo eliminar la transacción');
 }
 
-/** Total acumulado (histórico) de gastos clasificados como Ahorro (20%). */
 export async function getSavingsTotal() {
   let cents = 0;
   for (let offset = 0; ; offset += PAGE) {
@@ -102,11 +100,6 @@ export async function getSavingsTotal() {
   return cents / 100;
 }
 
-/**
- * Copia los gastos recurrentes del mes anterior al mes actual.
- * Omite los que ya existen (mismo concepto, monto y categorías) para evitar duplicados.
- * @returns {{created:number, skipped:number}}
- */
 export async function cloneRecurringExpenses(ref = new Date()) {
   const y = ref.getFullYear();
   const m = ref.getMonth();
@@ -140,7 +133,7 @@ export async function cloneRecurringExpenses(ref = new Date()) {
   const rows = [];
   for (const t of prevRes.data ?? []) {
     if (existing.has(keyOf(t))) continue;
-    existing.add(keyOf(t)); // evita duplicar dos recurrentes idénticos del mismo mes
+    existing.add(keyOf(t));
     const day = Math.min(Number(t.fecha.slice(8, 10)) || 1, lastDay);
     rows.push({
       concepto: t.concepto,
@@ -173,7 +166,7 @@ export async function listGoals() {
 export async function createGoal({ nombre, monto_objetivo }) {
   const { data, error } = await supabase
     .from('savings_goals')
-    .insert({ nombre, monto_objetivo: roundMoney(monto_objetivo) })
+    .insert({ nombre: nombre.trim(), monto_objetivo: roundMoney(monto_objetivo) })
     .select()
     .single();
   if (error) fail(error, 'No se pudo crear la meta');
@@ -183,7 +176,7 @@ export async function createGoal({ nombre, monto_objetivo }) {
 export async function updateGoal(id, { nombre, monto_objetivo }) {
   const { data, error } = await supabase
     .from('savings_goals')
-    .update({ nombre, monto_objetivo: roundMoney(monto_objetivo) })
+    .update({ nombre: nombre.trim(), monto_objetivo: roundMoney(monto_objetivo) })
     .eq('id', id)
     .select()
     .single();
@@ -201,12 +194,45 @@ export async function deleteGoal(id) {
   if (error) fail(error, 'No se pudo eliminar la meta');
 }
 
+/* ------------------------------- Deudas ------------------------------ */
+
+export async function listDebts() {
+  const { data, error } = await supabase.from('debts').select('*').order('created_at', { ascending: true });
+  if (error) fail(error, 'No se pudieron cargar las deudas');
+  return (data ?? []).map(normalizeDebt);
+}
+
+export async function createDebt({ nombre, monto_total, monto_pagado = 0 }) {
+  const { data, error } = await supabase
+    .from('debts')
+    .insert({ nombre: nombre.trim(), monto_total: roundMoney(monto_total), monto_pagado: roundMoney(monto_pagado) })
+    .select()
+    .single();
+  if (error) fail(error, 'No se pudo crear la deuda');
+  return normalizeDebt(data);
+}
+
+export async function updateDebt(id, { nombre, monto_total, monto_pagado }) {
+  const { data, error } = await supabase
+    .from('debts')
+    .update({ nombre: nombre.trim(), monto_total: roundMoney(monto_total), monto_pagado: roundMoney(monto_pagado) })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) fail(error, 'No se pudo actualizar la deuda');
+  return normalizeDebt(data);
+}
+
+export async function deleteDebt(id) {
+  const { error } = await supabase.from('debts').delete().eq('id', id);
+  if (error) fail(error, 'No se pudo eliminar la deuda');
+}
+
 /* ----------------------------- Tiempo real --------------------------- */
 
-/** Suscribe a cambios de las 4 tablas del usuario. Devuelve el canal. */
 export function subscribeToChanges(userId, onChange) {
   const channel = supabase.channel(`presupuesto-${userId}`);
-  for (const table of ['transactions', 'savings_goals', 'user_profiles', 'categories']) {
+  for (const table of ['transactions', 'savings_goals', 'user_profiles', 'categories', 'debts']) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table, filter: `user_id=eq.${userId}` }, (payload) =>
       onChange?.(table, payload)
     );
@@ -215,7 +241,6 @@ export function subscribeToChanges(userId, onChange) {
   return channel;
 }
 
-/** Cierra explícitamente el canal para evitar fugas de memoria/conexiones. */
 export async function unsubscribe(channel) {
   if (channel) await supabase.removeChannel(channel);
 }

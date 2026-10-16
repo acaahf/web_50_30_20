@@ -102,13 +102,21 @@
       </div>
     </section>
 
-    <div class="panels" style="grid-template-columns: 1fr;">
+    <div class="panels" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem;">
       <section class="card goals" aria-labelledby="goals-title">
-        <div class="goal-head">
-          <h2 id="goals-title" style="margin:0">🎯 Metas de ahorro</h2>
-          <button class="btn small no-print" id="btn-goal" type="button" aria-label="Crear meta de ahorro">＋ Meta</button>
+        <div class="goal-head" style="display:flex; justify-space-between; align-items:center; margin-bottom:0.75rem;">
+          <h2 id="goals-title" style="margin:0">📈 Ahorro e Inversiones</h2>
+          <button class="btn small no-print" id="btn-goal" type="button" aria-label="Crear meta o inversión">＋ Meta/Inversión</button>
         </div>
         <div id="goals-list" aria-live="polite"></div>
+      </section>
+
+      <section class="card debts" aria-labelledby="debts-title">
+        <div class="goal-head" style="display:flex; justify-space-between; align-items:center; margin-bottom:0.75rem;">
+          <h2 id="debts-title" style="margin:0">💳 Control de Deudas</h2>
+          <button class="btn small no-print" id="btn-debt" type="button" aria-label="Registrar deuda">＋ Deuda</button>
+        </div>
+        <div id="debts-list" aria-live="polite"></div>
       </section>
     </div>
 

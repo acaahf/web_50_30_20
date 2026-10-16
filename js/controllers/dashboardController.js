@@ -58,6 +58,7 @@ const state = {
   transactions: [],
   categories: [],
   goals: [],
+  debts: [],
   savingsTotal: 0,
   onboardingShown: false,
   ui: { ...DEFAULT_UI },
@@ -457,7 +458,7 @@ function renderGoals() {
 
   if (!goals.length) {
     list.innerHTML =
-      '<p class="goal-meta">Crea una meta (por ejemplo, “Fondo de emergencia”). Se llenará con lo que registres como Ahorro (20%).</p>';
+      '<p class="goal-meta">Crea una meta o inversión (por ejemplo, “Fondo de emergencia”, “ETF S&P500”). Se financiará con lo que registres como Ahorro (20%).</p>';
     return;
   }
 
@@ -478,6 +479,40 @@ function renderGoals() {
           </div>
           <div class="progress" style="--pct:${pct.toFixed(1)}%" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}" aria-label="Progreso de ${name}"></div>
           <span class="goal-meta sensitive">${escapeHTML(fmt(g.progress))} de ${escapeHTML(fmt(g.monto_objetivo))} · ${pct.toFixed(0)}%${done ? ' 🎉 Meta alcanzada' : ''}</span>
+        </article>`;
+      })
+      .join('');
+}
+
+function renderDebts() {
+  const list = $('#debts-list');
+  if (!list) return;
+  if (!state.debts.length) {
+    list.innerHTML =
+      '<p class="goal-meta">Registra una deuda (por ejemplo, “Tarjeta de Crédito”, “Préstamo automotriz”) para dar seguimiento a los saldos y abonos.</p>';
+    return;
+  }
+
+  const totalDebt = sumMoney(state.debts.map((d) => d.monto_total));
+  const totalPaid = sumMoney(state.debts.map((d) => d.monto_pagado));
+
+  list.innerHTML =
+    `<p class="goal-meta">Total amortizado: <strong class="sensitive">${escapeHTML(fmt(totalPaid))}</strong> de <strong class="sensitive">${escapeHTML(fmt(totalDebt))}</strong></p>` +
+    state.debts
+      .map((d) => {
+        const pct = d.monto_total > 0 ? Math.min(100, (d.monto_pagado / d.monto_total) * 100) : 0;
+        const done = d.monto_pagado >= d.monto_total;
+        const name = escapeHTML(d.nombre);
+        return `<article class="goal debt-item" data-id="${escapeHTML(d.id)}">
+          <div class="goal-head">
+            <span class="goal-name">${name}</span>
+            <span class="row-actions">
+              <button class="btn small icon no-print" type="button" data-debt-action="edit" aria-label="Editar deuda ${name}">✏️</button>
+              <button class="btn small icon no-print" type="button" data-debt-action="delete" aria-label="Eliminar deuda ${name}">🗑️</button>
+            </span>
+          </div>
+          <div class="progress" style="--pct:${pct.toFixed(1)}%; background: rgba(220, 38, 38, 0.15);" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}" aria-label="Progreso de ${name}"></div>
+          <span class="goal-meta sensitive">${escapeHTML(fmt(d.monto_pagado))} de ${escapeHTML(fmt(d.monto_total))} · ${pct.toFixed(0)}%${done ? ' ✅ Deuda Saldada' : ''}</span>
         </article>`;
       })
       .join('');
@@ -545,6 +580,7 @@ function renderAll() {
   renderKpis(summary);
   renderChart(summary);
   renderGoals();
+  renderDebts();
   renderCategoryFilter();
   renderTable(summary);
 }
@@ -553,14 +589,15 @@ function renderAll() {
 async function loadAll() {
   try {
     const from = `${new Date().getFullYear() - 1}-12-01`;
-    const [profile, transactions, goals, savingsTotal, userCategories] = await Promise.all([
+    const [profile, transactions, goals, debts, savingsTotal, userCategories] = await Promise.all([
       budget.getProfile(state.user.id),
       budget.listTransactions(from),
       budget.listGoals(),
+      budget.listDebts(),
       budget.getSavingsTotal(),
       catService.listCategories()
     ]);
-    Object.assign(state, { profile, transactions, goals, savingsTotal, categories: userCategories });
+    Object.assign(state, { profile, transactions, goals, debts, savingsTotal, categories: userCategories });
     state.pending.forEach((id) => {
       if (!transactions.some((t) => t.id === id)) state.pending.delete(id);
     });
@@ -788,12 +825,12 @@ async function openIncomeModal({ onboarding = false } = {}) {
 async function openGoalModal(goal = null) {
   const isEdit = Boolean(goal);
   const result = await Swal.fire({
-    title: isEdit ? 'Editar meta' : 'Nueva meta de ahorro',
+    title: isEdit ? 'Editar meta / inversión' : 'Nueva meta o inversión',
     background: 'var(--surface)',
     color: 'var(--text)',
     html: `<form class="swal-form" id="goal-form" novalidate>
       <label for="goal-nombre">Nombre
-        <input id="goal-nombre" type="text" maxlength="80" required value="${escapeHTML(goal?.nombre ?? '')}" placeholder="Ej. Fondo de emergencia">
+        <input id="goal-nombre" type="text" maxlength="80" required value="${escapeHTML(goal?.nombre ?? '')}" placeholder="Ej. Fondo de emergencia o ETF S&P500">
       </label>
       <label for="goal-monto">Monto objetivo
         <input id="goal-monto" type="number" inputmode="decimal" min="0.01" step="0.01" max="${MAX_AMOUNT}" required value="${escapeHTML(goal?.monto_objetivo ?? '')}" placeholder="0.00">
@@ -861,6 +898,93 @@ async function confirmDeleteGoal(goal) {
   });
   if (result.isConfirmed && result.value) {
     showToast('Meta eliminada', { type: 'success' });
+    await loadAll();
+  }
+}
+
+async function openDebtModal(debt = null) {
+  const isEdit = Boolean(debt);
+  const result = await Swal.fire({
+    title: isEdit ? 'Editar Deuda' : 'Nueva Deuda',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    html: `<form class="swal-form" id="debt-form" novalidate>
+      <label for="debt-nombre">Nombre de la deuda
+        <input id="debt-nombre" type="text" maxlength="80" required value="${escapeHTML(debt?.nombre ?? '')}" placeholder="Ej. Tarjeta Visa">
+      </label>
+      <div class="row">
+        <label for="debt-total">Monto total
+          <input id="debt-total" type="number" inputmode="decimal" min="0.01" step="0.01" max="${MAX_AMOUNT}" required value="${escapeHTML(debt?.monto_total ?? '')}" placeholder="0.00">
+        </label>
+        <label for="debt-pagado">Monto abonado
+          <input id="debt-pagado" type="number" inputmode="decimal" min="0" step="0.01" max="${MAX_AMOUNT}" value="${escapeHTML(debt?.monto_pagado ?? 0)}" placeholder="0.00">
+        </label>
+      </div>
+    </form>`,
+    showCancelButton: true,
+    confirmButtonText: 'Guardar',
+    cancelButtonText: 'Cancelar',
+    focusConfirm: false,
+    showLoaderOnConfirm: true,
+    allowOutsideClick: () => !Swal.isLoading(),
+    didOpen: (popup) => {
+      $('#debt-form', popup).addEventListener('submit', (e) => {
+        e.preventDefault();
+        Swal.clickConfirm();
+      });
+      $('#debt-nombre', popup).focus();
+    },
+    preConfirm: async () => {
+      const popup = Swal.getPopup();
+      const nombre = $('#debt-nombre', popup).value.trim();
+      const total = Number($('#debt-total', popup).value);
+      const pagado = Number($('#debt-pagado', popup).value) || 0;
+
+      if (!nombre) return Swal.showValidationMessage('Escribe el nombre de la deuda.');
+      if (!Number.isFinite(total) || total <= 0) return Swal.showValidationMessage('Ingresa un monto total positivo.');
+      if (pagado < 0 || pagado > total) return Swal.showValidationMessage('El abono no puede ser negativo ni superar la deuda total.');
+
+      try {
+        return isEdit
+          ? await budget.updateDebt(debt.id, { nombre, monto_total: roundMoney(total), monto_pagado: roundMoney(pagado) })
+          : await budget.createDebt({ nombre, monto_total: roundMoney(total), monto_pagado: roundMoney(pagado) });
+      } catch (error) {
+        return Swal.showValidationMessage(friendlyError(error));
+      }
+    }
+  });
+
+  if (result.isConfirmed && result.value) {
+    showToast(isEdit ? 'Deuda actualizada' : 'Deuda registrada', { type: 'success' });
+    await loadAll();
+  }
+}
+
+async function confirmDeleteDebt(debt) {
+  const result = await Swal.fire({
+    icon: 'warning',
+    title: '¿Eliminar deuda?',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    html: `Se eliminará la deuda <strong>${escapeHTML(debt.nombre)}</strong>.`,
+    showCancelButton: true,
+    confirmButtonText: 'Eliminar',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#dc2626',
+    showLoaderOnConfirm: true,
+    allowOutsideClick: () => !Swal.isLoading(),
+    preConfirm: async () => {
+      try {
+        await budget.deleteDebt(debt.id);
+        return true;
+      } catch (error) {
+        return Swal.showValidationMessage(friendlyError(error));
+      }
+    }
+  });
+
+  if (result.isConfirmed && result.value) {
+    showToast('Deuda eliminada', { type: 'success' });
     await loadAll();
   }
 }
@@ -1223,6 +1347,17 @@ function wireEvents() {
 
   $('#btn-lock-now').addEventListener('click', () => triggerLockScreen());
   $('#btn-security-settings').addEventListener('click', () => openSecurityModal());
+
+  $('#btn-debt')?.addEventListener('click', () => openDebtModal());
+
+  $('#debts-list')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-debt-action]');
+    if (!btn) return;
+    const debt = state.debts.find((d) => d.id === btn.closest('.debt-item')?.dataset.id);
+    if (!debt) return;
+    if (btn.dataset.debtAction === 'edit') openDebtModal(debt);
+    if (btn.dataset.debtAction === 'delete') confirmDeleteDebt(debt);
+  });
 
   $('#btn-clone').addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
