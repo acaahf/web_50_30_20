@@ -1,5 +1,5 @@
-
-import { createClient } from 'supabase';
+// js/guard.js
+import { supabase } from './supabaseClient.js';
 
 async function currentSession() {
   const { data, error } = await supabase.auth.getSession();
