@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Tl6i97BnE9NN3ZSGmkzQnm0vQ3/gnkqmUmMy/YWfnYk=' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Panel — Presupuesto 50/30/20</title>
+  <meta name="description" content="Tu panel de presupuesto personal, gráficos, metas y transacciones.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0284c7">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="stylesheet" href="./styles/dashboard.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "supabase": "https://esm.sh/@supabase/supabase-js@2.45.4",
+      "chart.js": "https://esm.sh/chart.js@4.4.4/auto",
+      "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+      "jspdf": "https://esm.sh/jspdf@2.5.2"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="bar">
+      <a class="brand" href="./dashboard.html" aria-label="Panel principal">💰 Presupuesto 50/30/20</a>
+      <nav aria-label="Navegación de la cuenta">
+        <span class="user-email" id="nav-email" aria-live="polite"></span>
+        <button class="btn icon ghost" id="btn-stealth" type="button" aria-pressed="false" aria-label="Activar modo privacidad" title="Modo privacidad">👁️</button>
+        <button class="btn small" id="btn-logout" type="button" aria-label="Cerrar sesión">Cerrar sesión</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="dash-head">
+      <h1>Mi presupuesto</h1>
+      <div class="actions no-print">
+        <button class="btn primary" id="btn-add" type="button" aria-label="Agregar transacción">＋ Transacción</button>
+        <button class="btn" id="btn-clone" type="button" aria-label="Copiar gastos recurrentes del mes anterior">🔁 Copiar recurrentes</button>
+        <button class="btn" id="btn-income" type="button" aria-label="Configurar ingreso mensual y divisa">⚙️ Ingreso y divisa</button>
+        <button class="btn" id="btn-categories" type="button" aria-label="Gestionar mis categorías">🏷️ Categorías</button>
+        <button class="btn" id="btn-csv" type="button" aria-label="Exportar a CSV">CSV</button>
+        <button class="btn" id="btn-pdf" type="button" aria-label="Exportar a PDF">PDF</button>
+      </div>
+    </div>
+
+    <section class="card onboarding-banner no-print" id="onboarding" aria-labelledby="onb-title" hidden>
+      <div>
+        <h2 id="onb-title" style="margin:0 0 .25rem">👋 Configura tu ingreso mensual</h2>
+        <p>Define tu ingreso base y tu divisa para desbloquear el cálculo de tus topes 50/30/20.</p>
+      </div>
+      <button class="btn primary" id="btn-onboard" type="button" aria-label="Configurar ingreso mensual">Configurar ahora</button>
+    </section>
+
+    <ul class="card budget-legend" aria-label="Leyenda de colores del presupuesto">
+      <li><span class="dot needs" aria-hidden="true"></span>🔵 50% Necesidades Básicas</li>
+      <li><span class="dot wants" aria-hidden="true"></span>🟣 30% Deseos y Estilo de Vida</li>
+      <li><span class="dot save" aria-hidden="true"></span>🟢 20% Ahorro e Inversión</li>
+      <li><span class="dot over" aria-hidden="true"></span>🔴 Exceso / Sobrepresupuesto</li>
+      <li><span aria-hidden="true">◎</span> Gráfico: anillo exterior = presupuesto ideal · anillo interior = gasto real</li>
+      <li><span aria-hidden="true">▬</span> Barras: se llenan con el gasto y pasan a rojo al superar el 100% del tope</li>
+    </ul>
+
+    <section aria-label="Indicadores del presupuesto">
+      <div class="kpi-grid">
+        <article class="card kpi income skeleton" id="kpi-income" aria-label="Ingreso base">
+          <span class="kpi-title">Ingreso base</span>
+          <span class="kpi-value sensitive" data-field="value">$0.00</span>
+          <span class="kpi-cap sensitive" data-field="cap">Tope: $0.00</span>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso de Ingreso base"></div>
+          <span class="kpi-left sensitive" data-field="left">Disponible: $0.00</span>
+        </article>
+        <article class="card kpi needs skeleton" id="kpi-needs" aria-label="Necesidades básicas">
+          <span class="kpi-title">50% Necesidades</span>
+          <span class="kpi-value sensitive" data-field="value">$0.00</span>
+          <span class="kpi-cap sensitive" data-field="cap">Tope: $0.00</span>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso de 50% Necesidades"></div>
+          <span class="kpi-left sensitive" data-field="left">Disponible: $0.00</span>
+        </article>
+        <article class="card kpi wants skeleton" id="kpi-wants" aria-label="Deseos y estilo de vida">
+          <span class="kpi-title">30% Deseos</span>
+          <span class="kpi-value sensitive" data-field="value">$0.00</span>
+          <span class="kpi-cap sensitive" data-field="cap">Tope: $0.00</span>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso de 30% Deseos"></div>
+          <span class="kpi-left sensitive" data-field="left">Disponible: $0.00</span>
+        </article>
+        <article class="card kpi save skeleton" id="kpi-save" aria-label="Ahorro e inversión">
+          <span class="kpi-title">20% Ahorro</span>
+          <span class="kpi-value sensitive" data-field="value">$0.00</span>
+          <span class="kpi-cap sensitive" data-field="cap">Tope: $0.00</span>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Progreso de 20% Ahorro"></div>
+          <span class="kpi-left sensitive" data-field="left">Disponible: $0.00</span>
+        </article>
+      </div>
+    </section>
+
+    <div class="panels">
+      <section class="card" aria-labelledby="chart-title">
+        <h2 id="chart-title">Presupuesto ideal vs. gasto real</h2>
+        <div class="chart-box">
+          <canvas id="budget-chart" role="img" aria-label="Gráfico de dona: presupuesto ideal frente a gasto real"></canvas>
+        </div>
+      </section>
+
+      <section class="card goals" aria-labelledby="goals-title">
+        <div class="goal-head">
+          <h2 id="goals-title" style="margin:0">🎯 Metas de ahorro</h2>
+          <button class="btn small no-print" id="btn-goal" type="button" aria-label="Crear meta de ahorro">＋ Meta</button>
+        </div>
+        <div id="goals-list" aria-live="polite"></div>
+      </section>
+    </div>
+
+    <section class="card" aria-labelledby="tx-title">
+      <h2 id="tx-title">Transacciones</h2>
+
+      <div class="toolbar no-print" role="search" aria-label="Filtros de transacciones">
+        <label for="f-search">Buscar
+          <input id="f-search" type="search" placeholder="Concepto o categoría…" autocomplete="off">
+        </label>
+        <label for="f-rule">Regla 50/30/20
+          <select id="f-rule">
+            <option value="todas">Todas</option>
+            <option value="necesidades">50% Necesidades</option>
+            <option value="deseos">30% Deseos</option>
+            <option value="ahorro">20% Ahorro</option>
+          </select>
+        </label>
+        <label for="f-category">Categoría
+          <select id="f-category">
+            <option value="todas">Todas</option>
+          </select>
+        </label>
+        <label for="f-method">Método de pago
+          <select id="f-method">
+            <option value="todos">Todos</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="debito">Débito</option>
+            <option value="credito">Crédito</option>
+            <option value="transferencia">Transferencia</option>
+          </select>
+        </label>
+        <label for="f-period">Período
+          <select id="f-period">
+            <option value="mes_actual">Mes actual</option>
+            <option value="mes_anterior">Mes anterior</option>
+            <option value="anio">Año completo</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="table-wrap">
+        <table class="tx-table" id="tx-table">
+          <caption class="visually-hidden">Listado de transacciones</caption>
+          <thead>
+            <tr>
+              <th scope="col" data-sort="fecha" tabindex="0" aria-sort="descending">Fecha</th>
+              <th scope="col">Concepto</th>
+              <th scope="col">Regla</th>
+              <th scope="col">Detalle</th>
+              <th scope="col">Pago</th>
+              <th scope="col" class="num" data-sort="monto" tabindex="0">Monto</th>
+              <th scope="col" class="no-print">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="tx-body">
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pagination no-print">
+        <label for="page-size" style="display:inline-flex;align-items:center;gap:.5rem;grid-auto-flow:column">Por página
+          <select id="page-size">
+            <option value="5">5</option>
+            <option value="10">10</option>
+          </select>
+        </label>
+        <span id="page-info" aria-live="polite"></span>
+        <span class="pager">
+          <button class="btn small" id="page-prev" type="button" aria-label="Página anterior">‹ Anterior</button>
+          <button class="btn small" id="page-next" type="button" aria-label="Página siguiente">Siguiente ›</button>
+        </span>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><p>Herramienta informativa, no constituye asesoría financiera.</p></footer>
+  <script type="module" src="./js/controllers/dashboardController.js"></script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Tl6i97BnE9NN3ZSGmkzQnm0vQ3/gnkqmUmMy/YWfnYk=' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Presupuesto 50/30/20 — Controla tu dinero</title>
+  <meta name="description" content="Calculadora de presupuesto personal basada en la regla 50/30/20.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0284c7">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles/main.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "supabase": "https://esm.sh/@supabase/supabase-js@2.45.4",
+      "chart.js": "https://esm.sh/chart.js@4.4.4/auto",
+      "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+      "jspdf": "https://esm.sh/jspdf@2.5.2"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="bar">
+      <a class="brand" href="./index.html" aria-label="Inicio — Presupuesto 50/30/20">💰 Presupuesto 50/30/20</a>
+      <nav aria-label="Navegación principal">
+        <a class="btn ghost" href="./login.html" aria-label="Iniciar sesión">Iniciar sesión</a>
+        <a class="btn primary" href="./register.html" aria-label="Crear cuenta gratis">Crear cuenta</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section aria-labelledby="hero-title" style="text-align:center;padding-block:clamp(1.5rem,5vw,4rem)">
+      <h1 id="hero-title" style="font-size:var(--fs-hero)">Tu dinero, con un plan simple</h1>
+      <p style="font-size:var(--fs-lg);color:var(--text-muted);max-inline-size:60ch;margin-inline:auto">
+        La regla <strong>50/30/20</strong> divide tus ingresos en tres partes claras. Registra tus gastos,
+        mira tu avance en tiempo real y alcanza tus metas de ahorro.
+      </p>
+      <p style="display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap">
+        <a class="btn primary" href="./register.html" aria-label="Empezar ahora">Empezar ahora</a>
+        <a class="btn" href="./login.html" aria-label="Ya tengo cuenta">Ya tengo cuenta</a>
+      </p>
+    </section>
+
+    <section aria-labelledby="rule-title">
+      <h2 id="rule-title" style="text-align:center">¿Cómo funciona el método?</h2>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:var(--space)">
+        <article class="card" style="border-top:6px solid var(--c-needs)">
+          <h3 style="color:var(--c-needs)">50% · Necesidades</h3>
+          <p>Vivienda, servicios, comida, transporte y salud: lo que necesitas para vivir con estabilidad.</p>
+        </article>
+        <article class="card" style="border-top:6px solid var(--c-wants)">
+          <h3 style="color:var(--c-wants)">30% · Deseos</h3>
+          <p>Entretenimiento, salidas y caprichos: lo que mejora tu estilo de vida sin comprometer lo esencial.</p>
+        </article>
+        <article class="card" style="border-top:6px solid var(--c-save)">
+          <h3 style="color:var(--c-save)">20% · Ahorro</h3>
+          <p>Fondo de emergencia, inversión y pago de deudas: tu seguridad y tu futuro financiero.</p>
+        </article>
+      </div>
+    </section>
+
+    <section aria-labelledby="features-title" style="margin-top:calc(var(--space)*2)">
+      <h2 id="features-title" style="text-align:center">Todo lo que necesitas</h2>
+      <ul style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:var(--space);list-style:none;padding:0">
+        <li class="card">📊 Gráficos de presupuesto ideal vs. gasto real</li>
+        <li class="card">🎯 Metas de ahorro alimentadas automáticamente</li>
+        <li class="card">🙈 Modo privacidad para ocultar tus cifras</li>
+        <li class="card">📄 Exporta reportes en CSV y PDF</li>
+        <li class="card">📱 Instalable como app y con soporte sin conexión</li>
+        <li class="card">🏷️ Categorías personalizables: crea, edita y organiza las tuyas</li>
+        <li class="card">🔒 Tus datos protegidos con seguridad a nivel de fila</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer"><p>Presupuesto 50/30/20 · Herramienta informativa, no constituye asesoría financiera.</p></footer>
+  <script type="module" src="./js/utils/helpers.js"></script>
+</body>
+</html>

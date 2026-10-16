@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Tl6i97BnE9NN3ZSGmkzQnm0vQ3/gnkqmUmMy/YWfnYk=' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Crear cuenta — Presupuesto 50/30/20</title>
+  <meta name="description" content="Crea tu cuenta gratuita y empieza a controlar tus gastos.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0284c7">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="stylesheet" href="./styles/auth.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "supabase": "https://esm.sh/@supabase/supabase-js@2.45.4",
+      "chart.js": "https://esm.sh/chart.js@4.4.4/auto",
+      "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+      "jspdf": "https://esm.sh/jspdf@2.5.2"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="bar">
+      <a class="brand" href="./index.html" aria-label="Ir al inicio">💰 Presupuesto 50/30/20</a>
+      <nav aria-label="Navegación principal">
+        <a class="btn ghost" href="./login.html" aria-label="Iniciar sesión">Iniciar sesión</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="auth-main">
+    <section class="card auth-card" aria-labelledby="register-title">
+      <header>
+        <h1 id="register-title">Crear cuenta</h1>
+        <p>Empieza a organizar tu dinero en minutos.</p>
+      </header>
+      <form id="register-form" novalidate>
+        <label for="email">Correo electrónico
+          <input id="email" name="email" type="email" autocomplete="email" required placeholder="tu@correo.com">
+        </label>
+        <label for="password">Contraseña
+          <input id="password" name="password" type="password" autocomplete="new-password" required minlength="6" placeholder="Mínimo 6 caracteres">
+          <span class="hint">Usa al menos 6 caracteres.</span>
+        </label>
+        <label for="confirm">Confirmar contraseña
+          <input id="confirm" name="confirm" type="password" autocomplete="new-password" required minlength="6" placeholder="Repite tu contraseña">
+        </label>
+        <p class="error-msg" id="register-error" role="alert" aria-live="polite"></p>
+        <button class="btn primary" type="submit" id="register-submit" aria-label="Crear mi cuenta">Crear cuenta</button>
+      </form>
+      <p class="switch">¿Ya tienes cuenta? <a href="./login.html">Inicia sesión</a></p>
+    </section>
+  </main>
+
+  <script type="module" src="./js/controllers/registerController.js"></script>
+</body>
+</html>

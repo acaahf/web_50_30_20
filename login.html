@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Tl6i97BnE9NN3ZSGmkzQnm0vQ3/gnkqmUmMy/YWfnYk=' https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Iniciar sesión — Presupuesto 50/30/20</title>
+  <meta name="description" content="Accede a tu panel de presupuesto.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0284c7">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="stylesheet" href="./styles/auth.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "supabase": "https://esm.sh/@supabase/supabase-js@2.45.4",
+      "chart.js": "https://esm.sh/chart.js@4.4.4/auto",
+      "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
+      "jspdf": "https://esm.sh/jspdf@2.5.2"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="bar">
+      <a class="brand" href="./index.html" aria-label="Ir al inicio">💰 Presupuesto 50/30/20</a>
+      <nav aria-label="Navegación principal">
+        <a class="btn ghost" href="./register.html" aria-label="Crear cuenta">Crear cuenta</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="auth-main">
+    <section class="card auth-card" aria-labelledby="login-title">
+      <header>
+        <h1 id="login-title">Iniciar sesión</h1>
+        <p>Bienvenido de nuevo. Accede a tu presupuesto.</p>
+      </header>
+      <form id="login-form" novalidate>
+        <label for="email">Correo electrónico
+          <input id="email" name="email" type="email" autocomplete="email" required placeholder="tu@correo.com">
+        </label>
+        <label for="password">Contraseña
+          <input id="password" name="password" type="password" autocomplete="current-password" required minlength="6" placeholder="••••••••">
+        </label>
+        <p class="error-msg" id="login-error" role="alert" aria-live="polite"></p>
+        <button class="btn primary" type="submit" id="login-submit" aria-label="Entrar a mi cuenta">Entrar</button>
+      </form>
+      <p class="switch">¿No tienes cuenta? <a href="./register.html">Regístrate</a></p>
+    </section>
+  </main>
+
+  <script type="module" src="./js/controllers/loginController.js"></script>
+</body>
+</html>

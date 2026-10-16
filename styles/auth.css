@@ -1,0 +1,50 @@
+/* =====================================================================
+   auth.css — Login y registro
+   ===================================================================== */
+
+.auth-main {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  padding: var(--space);
+}
+
+.auth-card {
+  width: min(100%, 440px);
+  display: grid;
+  gap: 1.1rem;
+
+  & header {
+    text-align: center;
+
+    & p { color: var(--text-muted); margin: 0; }
+  }
+
+  & form {
+    display: grid;
+    gap: 1rem;
+  }
+
+  & .hint {
+    font-size: var(--fs-sm);
+    color: var(--text-muted);
+    font-weight: 400;
+  }
+
+  & .switch {
+    text-align: center;
+    margin: 0;
+    font-size: var(--fs-sm);
+  }
+
+  & .error-msg {
+    color: var(--c-over);
+    font-size: var(--fs-sm);
+    min-height: 1.2em;
+    margin: 0;
+  }
+}
+
+.auth-card:has(input:user-invalid) .error-msg:empty::before {
+  content: 'Revisa los campos marcados en rojo.';
+}
