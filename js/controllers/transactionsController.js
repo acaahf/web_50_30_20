@@ -29,6 +29,7 @@ const RULES = {
 };
 const RULE_KEYS = Object.keys(RULES);
 const METHODS = { efectivo: 'Efectivo', debito: 'Débito', credito: 'Crédito', transferencia: 'Transferencia' };
+const CURRENCIES = ['USD', 'EUR', 'COP', 'MXN', 'ARS', 'CLP', 'PEN', 'BRL', 'UYU', 'BOB', 'PYG', 'GTQ', 'CRC', 'DOP', 'GBP', 'CAD'];
 const MAX_AMOUNT = 9999999999.99;
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -156,6 +157,54 @@ async function loadAll() {
   }
 }
 
+/* ------------------------------ Modales ------------------------------ */
+const options = (list, selected) =>
+  list
+    .map(([value, label]) => `<option value="${escapeHTML(value)}"${value === selected ? ' selected' : ''}>${escapeHTML(label)}</option>`)
+    .join('');
+
+async function openIncomeModal() {
+  const currencies = CURRENCIES.includes(state.profile.currency) ? CURRENCIES : [state.profile.currency, ...CURRENCIES];
+  const result = await Swal.fire({
+    title: 'Ingreso mensual y divisa',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    html: `<form class="swal-form" id="income-form" novalidate>
+      <label for="inc-monto">Ingreso mensual base
+        <input id="inc-monto" type="number" inputmode="decimal" min="0.01" step="0.01" max="${MAX_AMOUNT}" required value="${state.profile.monthly_income > 0 ? escapeHTML(state.profile.monthly_income) : ''}" placeholder="0.00">
+      </label>
+      <label for="inc-currency">Divisa
+        <select id="inc-currency">${options(currencies.map((c) => [c, c]), state.profile.currency)}</select>
+      </label>
+    </form>`,
+    showCancelButton: true,
+    confirmButtonText: 'Guardar',
+    cancelButtonText: 'Cancelar',
+    preConfirm: async () => {
+      const popup = Swal.getPopup();
+      const input = $('#inc-monto', popup);
+      const monthly_income = Number(input.value);
+      if (!input.checkValidity() || !Number.isFinite(monthly_income) || monthly_income < 0.01) {
+        return Swal.showValidationMessage('Ingresa un ingreso mensual mayor a 0.');
+      }
+      try {
+        return await budget.updateProfile(state.user.id, {
+          monthly_income,
+          currency: $('#inc-currency', popup).value
+        });
+      } catch (error) {
+        return Swal.showValidationMessage(friendlyError(error));
+      }
+    }
+  });
+
+  if (result.isConfirmed && result.value) {
+    state.profile = result.value;
+    showToast('Ingreso y divisa actualizados', { type: 'success' });
+    await loadAll();
+  }
+}
+
 async function openTransactionModal(tx = null) {
   const isEdit = Boolean(tx);
   const v = tx ?? {
@@ -169,16 +218,16 @@ async function openTransactionModal(tx = null) {
     title: isEdit ? 'Editar transacción' : 'Nueva transacción',
     background: 'var(--surface)', color: 'var(--text)',
     html: `<form class="swal-form" id="tx-form">
-      <label>Concepto <input id="tx-concepto" type="text" required value="${escapeHTML(v.concepto)}"></label>
+      <label>Concepto <input id="tx-concepto" type="text" required value="${escapeHTML(v.concepto)}" placeholder="Ej. Mercado"></label>
       <div class="row">
-        <label>Monto <input id="tx-monto" type="number" step="0.01" min="0.01" required value="${escapeHTML(v.monto)}"></label>
-        <label>Tipo <select id="tx-tipo"><option value="gasto"${v.tipo === 'gasto' ? ' selected' : ''}>Gasto</option><option value="ingreso"${v.tipo === 'ingreso' ? ' selected' : ''}>Ingreso</option></select></label>
+        <label>Monto <input id="tx-monto" type="number" step="0.01" min="0.01" max="${MAX_AMOUNT}" required value="${escapeHTML(v.monto)}"></label>
+        <label>Tipo <select id="tx-tipo">${options([['gasto', 'Gasto'], ['ingreso', 'Ingreso']], v.tipo)}</select></label>
       </div>
       <div id="tx-category-row">
         <label>Categoría <select id="tx-detalle">${state.categories.map(c => `<option value="${escapeHTML(c.nombre)}" data-rule="${c.categoria_503020}">${escapeHTML(c.nombre)}</option>`).join('')}</select></label>
       </div>
       <div class="row">
-        <label>Pago <select id="tx-metodo">${Object.entries(METHODS).map(([k, val]) => `<option value="${k}"${v.metodo_pago === k ? ' selected' : ''}>${val}</option>`).join('')}</select></label>
+        <label>Pago <select id="tx-metodo">${options(Object.entries(METHODS), v.metodo_pago)}</select></label>
         <label>Fecha <input id="tx-fecha" type="date" required value="${escapeHTML(v.fecha)}"></label>
       </div>
     </form>`,
@@ -191,7 +240,7 @@ async function openTransactionModal(tx = null) {
       const fecha = $('#tx-fecha', popup).value;
       const opt = $('#tx-detalle', popup).selectedOptions[0];
 
-      if (!concepto || !monto || monto <= 0) return Swal.showValidationMessage('Campos requeridos vacíos');
+      if (!concepto || !monto || monto <= 0) return Swal.showValidationMessage('Escribe concepto y monto válidos.');
 
       const payload = {
         concepto, monto: roundMoney(monto), tipo,
@@ -220,6 +269,7 @@ function wireEvents() {
   $('#page-next')?.addEventListener('click', () => { state.ui.page++; renderTable(); });
 
   $('#btn-add')?.addEventListener('click', () => openTransactionModal());
+  $('#btn-income')?.addEventListener('click', () => openIncomeModal());
   $('#btn-logout')?.addEventListener('click', async () => { await signOut(); window.location.replace('./index.html'); });
 
   $('#tx-body')?.addEventListener('click', async (e) => {
