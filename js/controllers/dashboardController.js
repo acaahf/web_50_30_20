@@ -191,6 +191,7 @@ function renderKpis(summary) {
 
 function renderChart(summary) {
   const canvas = $('#budget-chart');
+  if (!canvas) return; // Si la tarjeta del gráfico ya no está en dashboard.html, omite la renderización limpiamente
   renderBudgetChart(canvas, {
     labels: RULE_KEYS.map((k) => `${RULES[k].pct}% ${RULES[k].label}`),
     colors: RULE_KEYS.map((k) => RULES[k].color),

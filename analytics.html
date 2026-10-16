@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh https://cdn.jsdelivr.net; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <title>Análisis y Estadísticas — Presupuesto 50/30/20</title>
+  <meta name="description" content="Análisis visual, tendencias de gastos e ingresos y desglose por categorías.">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#0284c7">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E📊%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="./styles/main.css">
+  <link rel="stylesheet" href="./styles/dashboard.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "supabase": "https://esm.sh/@supabase/supabase-js@2.45.4",
+      "chart.js": "https://esm.sh/chart.js@4.4.4/auto",
+      "sweetalert2": "https://esm.sh/sweetalert2@11.14.5"
+    }
+  }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="bar">
+      <a class="brand" href="./dashboard.html" aria-label="Panel principal">💰 Presupuesto 50/30/20</a>
+      <nav aria-label="Navegación de la cuenta">
+        <a class="btn ghost small" href="./dashboard.html">📋 Panel</a>
+        <a class="btn primary small" href="./analytics.html" aria-current="page">📊 Análisis</a>
+        <span class="user-email" id="nav-email" aria-live="polite"></span>
+        <button class="btn icon ghost" id="btn-stealth" type="button" aria-pressed="false" aria-label="Activar modo privacidad" title="Modo privacidad">👁️</button>
+        <button class="btn small" id="btn-logout" type="button" aria-label="Cerrar sesión">Cerrar sesión</button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="dash-head">
+      <h1>Análisis y Estadísticas Financieras</h1>
+      <div class="toolbar no-print" role="search" aria-label="Filtro de período">
+        <label for="f-analytics-period">Período de análisis
+          <select id="f-analytics-period">
+            <option value="6_meses">Últimos 6 meses</option>
+            <option value="12_meses" selected>Últimos 12 meses</option>
+            <option value="todos">Todo el historial</option>
+          </select>
+        </label>
+      </div>
+    </div>
+
+    <div class="panels" style="grid-template-columns: 1fr;">
+      <!-- Gráfico 1: Evolución Temporal -->
+      <section class="card" aria-labelledby="chart-trend-title">
+        <h2 id="chart-trend-title">📈 Evolución Mensual: Ingresos vs. Gastos</h2>
+        <div class="chart-box" style="height: 320px;">
+          <canvas id="chart-trend" role="img" aria-label="Gráfico de líneas: tendencia mensual de ingresos y gastos"></canvas>
+        </div>
+      </section>
+
+      <!-- Gráficos secundarios -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+        <!-- Gráfico 2: Presupuesto Ideal vs Real (50/30/20) -->
+        <section class="card" aria-labelledby="chart-rules-title">
+          <h2 id="chart-rules-title">⚖️ Distribución 50/30/20 (Ideal vs. Real)</h2>
+          <div class="chart-box" style="height: 300px;">
+            <canvas id="chart-rules" role="img" aria-label="Gráfico de dona: regla 50/30/20"></canvas>
+          </div>
+        </section>
+
+        <!-- Gráfico 3: Desglose por Categoría Detallada -->
+        <section class="card" aria-labelledby="chart-cat-title">
+          <h2 id="chart-cat-title">🍕 Gastos por Categoría Detallada</h2>
+          <div class="chart-box" style="height: 300px;">
+            <canvas id="chart-categories" role="img" aria-label="Gráfico de dona: desglose por categoría"></canvas>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer"><p>Herramienta informativa, no constituye asesoría financiera.</p></footer>
+  <script type="module" src="./js/controllers/analyticsController.js"></script>
+</body>
+</html>

@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh https://cdn.jsdelivr.net; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Panel — Presupuesto 50/30/20</title>
-  <meta name="description" content="Tu panel de presupuesto personal, gráficos, metas y transacciones.">
+  <meta name="description" content="Tu panel de presupuesto personal, metas y transacciones.">
   <meta name="color-scheme" content="light dark">
   <meta name="theme-color" content="#0284c7">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles/main.css">
   <link rel="stylesheet" href="./styles/dashboard.css">
   <script type="importmap">
@@ -29,6 +28,8 @@
     <div class="bar">
       <a class="brand" href="./dashboard.html" aria-label="Panel principal">💰 Presupuesto 50/30/20</a>
       <nav aria-label="Navegación de la cuenta">
+        <a class="btn primary small" href="./dashboard.html" aria-current="page">📋 Panel</a>
+        <a class="btn ghost small" href="./analytics.html">📊 Análisis</a>
         <span class="user-email" id="nav-email" aria-live="polite"></span>
         <button class="btn icon ghost" id="btn-stealth" type="button" aria-pressed="false" aria-label="Activar modo privacidad" title="Modo privacidad">👁️</button>
         <button class="btn small" id="btn-logout" type="button" aria-label="Cerrar sesión">Cerrar sesión</button>
@@ -62,8 +63,7 @@
       <li><span class="dot wants" aria-hidden="true"></span>🟣 30% Deseos y Estilo de Vida</li>
       <li><span class="dot save" aria-hidden="true"></span>🟢 20% Ahorro e Inversión</li>
       <li><span class="dot over" aria-hidden="true"></span>🔴 Exceso / Sobrepresupuesto</li>
-      <li><span aria-hidden="true">◎</span> Gráfico: anillo exterior = presupuesto ideal · anillo interior = gasto real</li>
-      <li><span aria-hidden="true">▬</span> Barras: se llenan con el gasto y pasan a rojo al superar el 100% del tope</li>
+      <li><span aria-hidden="true">📊</span> Consulta las tendencias y gráficos interactivos en la pestaña "Análisis"</li>
     </ul>
 
     <section aria-label="Indicadores del presupuesto">
@@ -99,14 +99,7 @@
       </div>
     </section>
 
-    <div class="panels">
-      <section class="card" aria-labelledby="chart-title">
-        <h2 id="chart-title">Presupuesto ideal vs. gasto real</h2>
-        <div class="chart-box">
-          <canvas id="budget-chart" role="img" aria-label="Gráfico de dona: presupuesto ideal frente a gasto real"></canvas>
-        </div>
-      </section>
-
+    <div class="panels" style="grid-template-columns: 1fr;">
       <section class="card goals" aria-labelledby="goals-title">
         <div class="goal-head">
           <h2 id="goals-title" style="margin:0">🎯 Metas de ahorro</h2>
