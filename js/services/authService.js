@@ -1,5 +1,5 @@
 // js/services/authService.js — Servicio de autenticación
-import { supabase } from '../supabaseClient.js';
+import { createClient } from 'supabase';
 
 export async function getSession() {
   const { data, error } = await supabase.auth.getSession();

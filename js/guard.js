@@ -1,5 +1,5 @@
-// js/guard.js — Guardianes de ruta
-import { supabase } from './supabaseClient.js';
+
+import { createClient } from 'supabase';
 
 async function currentSession() {
   const { data, error } = await supabase.auth.getSession();

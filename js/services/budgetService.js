@@ -1,5 +1,5 @@
 // js/services/budgetService.js — Repositorio/Servicio de presupuesto (Supabase)
-import { supabase } from '../supabaseClient.js';
+import { createClient } from 'supabase';
 import { toISODate, roundMoney } from '../utils/helpers.js';
 
 const PAGE = 1000;
