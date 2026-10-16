@@ -6,6 +6,34 @@
   <title>Panel — Presupuesto 50/30/20</title>
   <link rel="stylesheet" href="./styles/main.css">
   <link rel="stylesheet" href="./styles/dashboard.css">
+  <style>
+    /* Estructura garantizada para la rejilla del panel */
+    .kpi-grid {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+      gap: 1rem !important;
+      margin-bottom: 1.5rem !important;
+    }
+    .panels {
+      display: grid !important;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important;
+      gap: 1.5rem !important;
+    }
+    .budget-legend {
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 1rem !important;
+      list-style: none !important;
+      padding: 0.75rem 1rem !important;
+      margin-bottom: 1.5rem !important;
+    }
+    .budget-legend li {
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.4rem !important;
+      font-size: 0.85rem !important;
+    }
+  </style>
   <script type="importmap">
   {
     "imports": {
@@ -44,7 +72,7 @@
       </div>
     </div>
 
-    <!-- Banner de configuración de ingreso -->
+    <!-- Onboarding / Banner de advertencia -->
     <section class="card onboarding-banner no-print" id="onboarding" aria-labelledby="onb-title" hidden>
       <div>
         <h2 id="onb-title" style="margin:0 0 .25rem">👋 Configura tu ingreso mensual</h2>
@@ -55,13 +83,13 @@
 
     <!-- Leyenda de distribución -->
     <ul class="card budget-legend" aria-label="Leyenda del presupuesto">
-      <li><span class="dot needs" aria-hidden="true"></span>🔵 50% Necesidades Básicas</li>
-      <li><span class="dot wants" aria-hidden="true"></span>🟣 30% Deseos y Estilo de Vida</li>
-      <li><span class="dot save" aria-hidden="true"></span>🟢 20% Ahorro e Inversión</li>
-      <li><span class="dot over" aria-hidden="true"></span>🔴 Exceso / Sobrepresupuesto</li>
+      <li>🔵 50% Necesidades Básicas</li>
+      <li>🟣 30% Deseos y Estilo de Vida</li>
+      <li>🟢 20% Ahorro e Inversión</li>
+      <li>🔴 Exceso / Sobrepresupuesto</li>
     </ul>
 
-    <!-- Tarjetas KPI en cuadrícula horizontal de 4 columnas -->
+    <!-- Tarjetas KPI en fila horizontal (4 columnas) -->
     <section aria-label="Indicadores del presupuesto">
       <div class="kpi-grid">
         <article class="card kpi income skeleton" id="kpi-income">
@@ -101,17 +129,17 @@
     <!-- Metas y Deudas organizadas en 2 columnas paralelas -->
     <div class="panels">
       <section class="card goals" aria-labelledby="goals-title">
-        <div class="goal-head">
-          <h2 id="goals-title" style="margin: 0;">📈 Ahorro e Inversiones</h2>
-          <button class="btn small no-print" id="btn-goal" type="button">＋ Meta</button>
+        <div class="goal-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h2 id="goals-title" style="margin:0;">📈 Ahorro e Inversiones</h2>
+          <button class="btn small primary no-print" id="btn-goal" type="button">＋ Meta</button>
         </div>
         <div id="goals-list" aria-live="polite"></div>
       </section>
 
       <section class="card debts" aria-labelledby="debts-title">
-        <div class="goal-head">
-          <h2 id="debts-title" style="margin: 0;">💳 Control de Deudas</h2>
-          <button class="btn small no-print" id="btn-debt" type="button">＋ Deuda</button>
+        <div class="goal-head" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h2 id="debts-title" style="margin:0;">💳 Control de Deudas</h2>
+          <button class="btn small primary no-print" id="btn-debt" type="button">＋ Deuda</button>
         </div>
         <div id="debts-list" aria-live="polite"></div>
       </section>
