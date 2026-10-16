@@ -98,12 +98,31 @@
   &.over { --bar: var(--c-over); }
 }
 
-/* ---------- Gráfico + metas ---------- */
+/* ---------- Gráfico, metas y deudas ---------- */
 .panels {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
   gap: var(--space);
   margin-bottom: var(--space);
+}
+
+.chart-box {
+  position: relative;
+  min-height: 300px;
+  height: 320px;
+}
+
+.goals,
+.debts {
+  display: grid;
+  gap: 0.9rem;
+  align-content: start;
+
+  & .goal { display: grid; gap: 0.35rem; }
+  & .goal-head { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; width: 100%; }
+  & .goal-name { font-weight: 700; overflow-wrap: anywhere; }
+  & .goal-meta { font-size: var(--fs-sm); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+  & .progress { --accent: var(--c-save); }
 }
 
 .chart-box {
