@@ -5,6 +5,7 @@ import { requireAuth } from '../utils/authGuard.js';
 import { signOut, onAuthChange } from '../services/authService.js';
 import * as budget from '../services/budgetService.js';
 import * as catService from '../services/categoryService.js';
+import * as security from '../services/securityService.js';
 import { renderBudgetChart, destroyChart } from '../utils/chartManager.js';
 import { exportCSV } from '../utils/csvExport.js';
 import {
@@ -35,7 +36,7 @@ const RULE_KEYS = Object.keys(RULES);
 const METHODS = { efectivo: 'Efectivo', debito: 'Débito', credito: 'Crédito', transferencia: 'Transferencia' };
 const CURRENCIES = ['USD', 'EUR', 'COP', 'MXN', 'ARS', 'CLP', 'PEN', 'BRL', 'UYU', 'BOB', 'PYG', 'GTQ', 'CRC', 'DOP', 'GBP', 'CAD'];
 const PERIODS = ['mes_actual', 'mes_anterior', 'anio'];
-const MAX_AMOUNT = 9999999999.99; // numeric(12,2)
+const MAX_AMOUNT = 9999999999.99;
 
 const DEFAULT_UI = {
   rule: 'todas',
@@ -118,6 +119,217 @@ function checkQuickActions() {
   if (params.get('action') === 'add') {
     window.history.replaceState({}, document.title, window.location.pathname);
     openTransactionModal();
+  }
+}
+
+/* ------------------------------ Bloqueo por PIN y Biometría ------------------------------ */
+let inactivityTimer = null;
+
+function resetInactivityTimer() {
+  if (inactivityTimer) clearTimeout(inactivityTimer);
+  if (state.user && security.hasPinConfigured(state.user.id)) {
+    inactivityTimer = setTimeout(() => triggerLockScreen(), 5 * 60 * 1000);
+  }
+}
+
+function triggerLockScreen() {
+  if (!state.user || !security.hasPinConfigured(state.user.id)) {
+    return showToast('Primero configura un PIN en el ícono ⚙️ para habilitar el bloqueo.', { type: 'info' });
+  }
+  security.lockScreen(state.user.id);
+  showLockOverlay();
+}
+
+function showLockOverlay() {
+  if (document.getElementById('lock-overlay')) return;
+
+  const overlay = document.createElement('div');
+  overlay.id = 'lock-overlay';
+  overlay.className = 'lock-overlay';
+
+  const hasBio = security.hasBiometricsConfigured(state.user.id);
+
+  overlay.innerHTML = `
+    <div class="lock-card">
+      <h2>🔒 App Bloqueada</h2>
+      <p style="font-size: 0.85rem; margin-top: 0.25rem;">Ingresa tu PIN de 4 dígitos</p>
+      
+      <div class="pin-display">
+        <span class="pin-dot" id="dot-0"></span>
+        <span class="pin-dot" id="dot-1"></span>
+        <span class="pin-dot" id="dot-2"></span>
+        <span class="pin-dot" id="dot-3"></span>
+      </div>
+
+      <div class="pin-pad">
+        <button class="btn ghost" data-num="1">1</button>
+        <button class="btn ghost" data-num="2">2</button>
+        <button class="btn ghost" data-num="3">3</button>
+        <button class="btn ghost" data-num="4">4</button>
+        <button class="btn ghost" data-num="5">5</button>
+        <button class="btn ghost" data-num="6">6</button>
+        <button class="btn ghost" data-num="7">7</button>
+        <button class="btn ghost" data-num="8">8</button>
+        <button class="btn ghost" data-num="9">9</button>
+        <button class="btn ghost danger" id="btn-pin-clear">⌫</button>
+        <button class="btn ghost" data-num="0">0</button>
+        ${hasBio ? '<button class="btn ghost success" id="btn-bio-unlock" title="Desbloquear con Huella/FaceID">👆</button>' : '<div></div>'}
+      </div>
+
+      <div style="margin-top: 1.5rem;">
+        <button class="btn ghost small danger" id="btn-lock-logout">Cerrar sesión</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  let enteredPin = '';
+
+  const updateDots = () => {
+    for (let i = 0; i < 4; i++) {
+      const dot = document.getElementById(`dot-${i}`);
+      if (dot) dot.classList.toggle('filled', i < enteredPin.length);
+    }
+  };
+
+  const handleNum = async (num) => {
+    if (enteredPin.length < 4) {
+      enteredPin += num;
+      updateDots();
+    }
+    if (enteredPin.length === 4) {
+      const valid = await security.verifyPin(state.user.id, enteredPin);
+      if (valid) {
+        security.unlockScreen(state.user.id);
+        overlay.remove();
+        showToast('Pantalla desbloqueada', { type: 'success' });
+      } else {
+        showToast('PIN incorrecto', { type: 'error' });
+        enteredPin = '';
+        updateDots();
+      }
+    }
+  };
+
+  overlay.querySelectorAll('[data-num]').forEach((btn) => {
+    btn.addEventListener('click', () => handleNum(btn.dataset.num));
+  });
+
+  document.getElementById('btn-pin-clear')?.addEventListener('click', () => {
+    enteredPin = enteredPin.slice(0, -1);
+    updateDots();
+  });
+
+  document.getElementById('btn-lock-logout')?.addEventListener('click', async () => {
+    overlay.remove();
+    await teardown();
+    await signOut();
+    window.location.replace('./index.html');
+  });
+
+  const tryBio = async () => {
+    try {
+      const success = await security.verifyBiometrics(state.user.id);
+      if (success) {
+        security.unlockScreen(state.user.id);
+        overlay.remove();
+        showToast('Desbloqueado con biometría', { type: 'success' });
+      }
+    } catch {
+      showToast('Error de biometría', { type: 'error' });
+    }
+  };
+
+  if (hasBio) {
+    document.getElementById('btn-bio-unlock')?.addEventListener('click', tryBio);
+    tryBio();
+  }
+}
+
+async function openSecurityModal() {
+  const hasPin = security.hasPinConfigured(state.user.id);
+  const hasBio = security.hasBiometricsConfigured(state.user.id);
+  const bioSupported = await security.isBiometricsSupported();
+
+  const result = await Swal.fire({
+    title: '⚙️ Seguridad y PIN',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    html: `
+      <div style="text-align: left; display: flex; flex-direction: column; gap: 1rem;">
+        <p style="font-size: 0.85rem;">Configura un PIN de 4 dígitos para bloquear tu pantalla rápidamente o por inactividad.</p>
+
+        <label for="swal-pin-input">
+          ${hasPin ? 'Cambiar PIN (4 dígitos)' : 'Crear PIN de 4 dígitos'}
+          <input id="swal-pin-input" type="password" maxlength="4" inputmode="numeric" placeholder="****" style="margin-top: 0.25rem;">
+        </label>
+
+        ${
+          bioSupported
+            ? `<div style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 8px;">
+                <span>👆 Huella / FaceID</span>
+                <button class="btn small ${hasBio ? 'danger' : 'primary'}" type="button" id="btn-toggle-bio">
+                  ${hasBio ? 'Desactivar' : 'Activar'}
+                </button>
+               </div>`
+            : ''
+        }
+
+        ${
+          hasPin
+            ? `<button class="btn small danger" type="button" id="btn-remove-security" style="margin-top: 0.5rem;">
+                Eliminar PIN y Protección
+               </button>`
+            : ''
+        }
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Guardar PIN',
+    cancelButtonText: 'Cancelar',
+    didOpen: (popup) => {
+      popup.querySelector('#btn-toggle-bio')?.addEventListener('click', async () => {
+        try {
+          if (hasBio) {
+            localStorage.removeItem(`budget_bio_cred_${state.user.id}`);
+            showToast('Biometría desactivada', { type: 'info' });
+            Swal.close();
+          } else {
+            const ok = await security.registerBiometrics(state.user.id, state.user.email);
+            if (ok) {
+              showToast('Biometría configurada correctamente', { type: 'success' });
+              Swal.close();
+            }
+          }
+        } catch (err) {
+          showToast(err.message, { type: 'error' });
+        }
+      });
+
+      popup.querySelector('#btn-remove-security')?.addEventListener('click', () => {
+        security.removeSecurity(state.user.id);
+        showToast('Seguridad eliminada', { type: 'info' });
+        Swal.close();
+      });
+    },
+    preConfirm: async () => {
+      const pin = document.getElementById('swal-pin-input').value;
+      if (!pin) {
+        if (!hasPin) return Swal.showValidationMessage('Escribe un PIN de 4 dígitos.');
+        return true;
+      }
+      try {
+        await security.setPin(state.user.id, pin);
+        return true;
+      } catch (err) {
+        return Swal.showValidationMessage(err.message);
+      }
+    }
+  });
+
+  if (result.isConfirmed) {
+    showToast('Ajustes de seguridad actualizados', { type: 'success' });
   }
 }
 
@@ -1009,6 +1221,9 @@ function wireEvents() {
   $('#btn-categories').addEventListener('click', () => openCategoryManager());
   $('#btn-onboard').addEventListener('click', () => openIncomeModal({ onboarding: true }));
 
+  $('#btn-lock-now').addEventListener('click', () => triggerLockScreen());
+  $('#btn-security-settings').addEventListener('click', () => openSecurityModal());
+
   $('#btn-clone').addEventListener('click', (e) =>
     withLoading(e.currentTarget, async () => {
       try {
@@ -1099,6 +1314,15 @@ async function init() {
       teardown().finally(() => window.location.replace('./index.html'));
     }
   });
+
+  if (security.isScreenLocked(state.user.id) && security.hasPinConfigured(state.user.id)) {
+    showLockOverlay();
+  }
+
+  ['mousemove', 'keydown', 'touchstart', 'scroll'].forEach((evt) => {
+    window.addEventListener(evt, resetInactivityTimer, { passive: true });
+  });
+  resetInactivityTimer();
 
   await loadAll();
 

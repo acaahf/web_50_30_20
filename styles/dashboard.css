@@ -325,3 +325,67 @@ table.tx-table {
   font-size: var(--fs-sm);
   color: var(--text-muted);
 }
+
+/* Overlay de Bloqueo de Pantalla y Teclado PIN */
+.lock-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: var(--surface, #0f172a);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  backdrop-filter: blur(12px);
+}
+
+.lock-card {
+  background: var(--surface-card, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.pin-display {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.pin-dot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--primary, #0284c7);
+  transition: all 0.2s ease;
+}
+
+.pin-dot.filled {
+  background: var(--primary, #0284c7);
+  box-shadow: 0 0 10px var(--primary, #0284c7);
+}
+
+.pin-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  max-width: 260px;
+  margin: 0 auto;
+}
+
+.pin-pad button {
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding: 0.85rem;
+  border-radius: 50%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
