@@ -1,7 +1,8 @@
-import { supabase } from '../services/supabaseClient.js';
+// js/utils/authGuard.js — Guardián de Autenticación
+import { supabase } from '../supabaseClient.js';
 
 /**
- * Guardian de Autenticación
+ * Guardián de Autenticación
  * Verifica si hay una sesión activa en Supabase.
  * Si no la hay, frena el código y redirige inmediatamente al login.
  */
@@ -9,8 +10,8 @@ export async function requireAuth() {
   const { data: { session }, error } = await supabase.auth.getSession();
 
   if (error || !session) {
-    // Redirigir al inicio de sesión si no hay token o la sesión expiró
-    window.location.href = 'index.html';
+    // Redirigir al inicio si no hay token o la sesión expiró
+    window.location.replace('./index.html');
     return null;
   }
 
@@ -22,5 +23,5 @@ export async function requireAuth() {
  */
 export async function logout() {
   await supabase.auth.signOut();
-  window.location.href = 'index.html';
+  window.location.replace('./index.html');
 }
