@@ -1,5 +1,5 @@
 // sw.js — Service Worker nativo: caché offline de la App Shell
-const CACHE_NAME = 'presupuesto-shell-v3';
+const CACHE_NAME = 'presupuesto-shell-v4';
 
 const APP_SHELL = [
   './',
@@ -7,6 +7,7 @@ const APP_SHELL = [
   './login.html',
   './register.html',
   './dashboard.html',
+  './analytics.html',
   './manifest.webmanifest',
   './styles/main.css',
   './styles/auth.css',
@@ -20,6 +21,7 @@ const APP_SHELL = [
   './js/controllers/loginController.js',
   './js/controllers/registerController.js',
   './js/controllers/dashboardController.js',
+  './js/controllers/analyticsController.js',
   './js/utils/helpers.js',
   './js/utils/chartManager.js',
   './js/utils/csvExport.js',
@@ -50,13 +52,13 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // 1. Filtrar esquemas no soportados por la API Cache (chrome-extension://, moz-extension://, file://, etc.)
+  // 1. Filtrar esquemas no soportados por la API Cache
   if (!url.protocol.startsWith('http')) return;
 
   // 2. Nunca cachear llamadas a la API de Supabase (datos siempre frescos)
   if (url.hostname.endsWith('.supabase.co')) return;
 
-  // 3. Mismo origen: cache-first con actualización en segundo plano (stale-while-revalidate)
+  // 3. Mismo origen: cache-first con actualización en segundo plano
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.match(request).then((cached) => {

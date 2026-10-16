@@ -85,6 +85,42 @@ function sanitizeUi(raw = {}) {
 
 const persistUi = () => state.user && saveUiState(state.user.id, state.ui);
 
+/* ------------------------------ PWA & Accesos Rápidos ------------------------------ */
+let deferredPrompt = null;
+
+function setupPWA() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+  const installBtn = $('#btn-install-pwa');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) installBtn.hidden = false;
+  });
+
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        installBtn.hidden = true;
+      }
+      deferredPrompt = null;
+    });
+  }
+}
+
+function checkQuickActions() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('action') === 'add') {
+    window.history.replaceState({}, document.title, window.location.pathname);
+    openTransactionModal();
+  }
+}
+
 /* ------------------------------ Cálculos ------------------------------ */
 const visibleTransactions = () => state.transactions.filter((t) => !state.pending.has(t.id));
 
@@ -191,7 +227,7 @@ function renderKpis(summary) {
 
 function renderChart(summary) {
   const canvas = $('#budget-chart');
-  if (!canvas) return; // Si la tarjeta del gráfico ya no está en dashboard.html, omite la renderización limpiamente
+  if (!canvas) return;
   renderBudgetChart(canvas, {
     labels: RULE_KEYS.map((k) => `${RULES[k].pct}% ${RULES[k].label}`),
     colors: RULE_KEYS.map((k) => RULES[k].color),
@@ -998,6 +1034,7 @@ async function teardown() {
 
 /* ------------------------------ Inicio ------------------------------ */
 async function init() {
+  setupPWA(); // Inicializar PWA e instalador dinámico
   initStealthToggle($('#btn-stealth'));
 
   // 1. Validar autenticación con el guardián modular
@@ -1028,6 +1065,8 @@ async function init() {
     state.onboardingShown = true;
     openIncomeModal({ onboarding: true });
   }
+
+  checkQuickActions(); // Abrir modal automático si la app fue abierta desde el acceso directo PWA
 }
 
 init();
