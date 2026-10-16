@@ -1,5 +1,8 @@
 // js/utils/chartManager.js — Gestor central de gráficos (Chart.js vía Import Map)
-import { Chart } from 'chart.js';
+import { Chart, registerables } from 'chart.js';
+
+// Registrar todos los componentes necesarios (doughnut, line, tooltip, leyenda, etc.)
+Chart.register(...registerables);
 
 const instances = new Map();
 
