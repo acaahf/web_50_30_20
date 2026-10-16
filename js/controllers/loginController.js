@@ -2,7 +2,7 @@
 import Swal from 'sweetalert2';
 import { redirectIfSession } from '../guard.js';
 import { signIn } from '../services/authService.js';
-import { isConfigured } from '../supabaseClient.js';
+import { isConfigured, supabase } from '../supabaseClient.js';
 import { friendlyError, withLoading } from '../utils/helpers.js';
 
 const form = document.getElementById('login-form');

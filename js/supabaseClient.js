@@ -9,10 +9,15 @@ export const isConfigured =
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
-    persistSession: true, // Mantiene la sesión entre cierres del navegador
+    persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true, // Procesa el enlace de confirmación de email
+    detectSessionInUrl: true,
     storage: window.localStorage
   },
   realtime: { params: { eventsPerSecond: 5 } }
 });
+
+// Asignación global a window para resolver "supabase is not defined" en cualquier ámbito
+if (typeof window !== 'undefined') {
+  window.supabase = supabase;
+}

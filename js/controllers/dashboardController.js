@@ -1,5 +1,6 @@
 // js/controllers/dashboardController.js — Panel principal
 import Swal from 'sweetalert2';
+import { supabase } from '../supabaseClient.js';
 import { requireAuth } from '../utils/authGuard.js';
 import { signOut, onAuthChange } from '../services/authService.js';
 import * as budget from '../services/budgetService.js';
