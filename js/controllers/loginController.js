@@ -10,15 +10,17 @@ const submit = document.getElementById('login-submit');
 const errorBox = document.getElementById('login-error');
 
 const setError = (message = '') => {
-  errorBox.textContent = message;
+  if (errorBox) errorBox.textContent = message;
 };
 
 async function init() {
-  if (await redirectIfSession()) return;
+  if (typeof redirectIfSession === 'function' && await redirectIfSession()) return;
 
   if (!isConfigured) {
     setError('Configura SUPABASE_URL y SUPABASE_ANON_KEY en js/supabaseClient.js.');
   }
+
+  if (!form) return;
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
