@@ -3,13 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://esm.sh https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: blob:; font-src 'self' data: https://cdn.jsdelivr.net; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh https://cdn.jsdelivr.net; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
   <title>Transacciones — Presupuesto 50/30/20</title>
-  <meta name="description" content="Histórico y gestión detallada de transacciones.">
-  <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#0284c7">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E💰%3C/text%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles/main.css">
   <link rel="stylesheet" href="./styles/dashboard.css">
   <script type="importmap">
@@ -44,18 +38,16 @@
     <div class="dash-head">
       <h1>Histórico de Transacciones</h1>
       <div class="actions no-print">
-        <button class="btn primary" id="btn-add" type="button" aria-label="Agregar transacción">＋ Transacción</button>
-        <button class="btn" id="btn-clone" type="button" aria-label="Copiar gastos recurrentes del mes anterior">🔁 Copiar recurrentes</button>
-        <button class="btn" id="btn-categories" type="button" aria-label="Gestionar mis categorías">🏷️ Categorías</button>
-        <button class="btn" id="btn-csv" type="button" aria-label="Exportar a CSV">CSV</button>
-        <button class="btn" id="btn-pdf" type="button" aria-label="Exportar a PDF">PDF</button>
+        <button class="btn primary" id="btn-add" type="button">＋ Transacción</button>
+        <button class="btn" id="btn-clone" type="button">🔁 Copiar recurrentes</button>
+        <button class="btn" id="btn-categories" type="button">🏷️ Categorías</button>
+        <button class="btn" id="btn-csv" type="button">CSV</button>
+        <button class="btn" id="btn-pdf" type="button">PDF</button>
       </div>
     </div>
 
     <section class="card" aria-labelledby="tx-title">
-      <h2 id="tx-title" class="visually-hidden">Listado Completo</h2>
-
-      <div class="toolbar no-print" role="search" aria-label="Filtros de transacciones">
+      <div class="toolbar no-print" role="search">
         <label for="f-search">Buscar
           <input id="f-search" type="search" placeholder="Concepto o categoría…" autocomplete="off">
         </label>
@@ -83,6 +75,7 @@
         </label>
         <label for="f-period">Período
           <select id="f-period">
+            <option value="todos">Todas las fechas</option>
             <option value="mes_actual">Mes actual</option>
             <option value="mes_anterior">Mes anterior</option>
             <option value="anio">Año completo</option>
@@ -92,7 +85,6 @@
 
       <div class="table-wrap">
         <table class="tx-table" id="tx-table">
-          <caption class="visually-hidden">Listado de transacciones</caption>
           <thead>
             <tr>
               <th scope="col" data-sort="fecha" tabindex="0" aria-sort="descending">Fecha</th>
@@ -105,19 +97,14 @@
             </tr>
           </thead>
           <tbody id="tx-body">
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
-            <tr class="skeleton-row"><td colspan="7"><div class="skeleton" style="height:22px">.</div></td></tr>
+            <tr><td colspan="7" class="empty-state">Cargando transacciones…</td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="pagination no-print">
-        <label for="page-size" style="display:inline-flex;align-items:center;gap:.5rem;grid-auto-flow:column">Por página
+        <label for="page-size" style="display:inline-flex;align-items:center;gap:.5rem">Por página
           <select id="page-size">
-            <option value="5">5</option>
             <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>
@@ -125,14 +112,13 @@
         </label>
         <span id="page-info" aria-live="polite"></span>
         <span class="pager">
-          <button class="btn small" id="page-prev" type="button" aria-label="Página anterior">‹ Anterior</button>
-          <button class="btn small" id="page-next" type="button" aria-label="Página siguiente">Siguiente ›</button>
+          <button class="btn small" id="page-prev" type="button">‹ Anterior</button>
+          <button class="btn small" id="page-next" type="button">Siguiente ›</button>
         </span>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer"><p>Herramienta informativa, no constituye asesoría financiera.</p></footer>
   <script type="module" src="./js/controllers/transactionsController.js"></script>
 </body>
 </html>
