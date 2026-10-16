@@ -1,4 +1,4 @@
-// js/controllers/dashboardController.js — Panel Principal
+// js/controllers/dashboardController.js — Panel Principal completo con Seguridad y PWA
 import Swal from 'sweetalert2';
 import { requireAuth } from '../utils/authGuard.js';
 import { signOut, onAuthChange } from '../services/authService.js';
@@ -25,7 +25,6 @@ const RULES = {
 const RULE_KEYS = Object.keys(RULES);
 const METHODS = { efectivo: 'Efectivo', debito: 'Débito', credito: 'Crédito', transferencia: 'Transferencia' };
 const CURRENCIES = ['USD', 'EUR', 'COP', 'MXN', 'ARS', 'CLP', 'PEN', 'BRL', 'UYU', 'BOB', 'PYG', 'GTQ', 'CRC', 'DOP', 'GBP', 'CAD'];
-const MAX_AMOUNT = 9999999999.99;
 
 const $ = (selector, root = document) => root.querySelector(selector);
 
@@ -36,13 +35,36 @@ const state = {
   categories: [],
   goals: [],
   debts: [],
-  savingsTotal: 0,
-  onboardingShown: false
+  savingsTotal: 0
 };
 
 const fmt = (value) => formatCurrency(value, state.profile.currency);
 
-/* Bloqueo y Seguridad */
+/* ------------------------------ PWA ------------------------------ */
+let deferredPrompt = null;
+
+function setupPWA() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+  const installBtn = $('#btn-install-pwa');
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    if (installBtn) installBtn.hidden = false;
+  });
+  installBtn?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted' && installBtn) {
+      installBtn.hidden = true;
+    }
+    deferredPrompt = null;
+  });
+}
+
+/* ------------------------------ Bloqueo y Seguridad ------------------------------ */
 let inactivityTimer = null;
 
 function resetInactivityTimer() {
@@ -135,7 +157,80 @@ function showLockOverlay() {
   }
 }
 
-/* Cántulos */
+async function configurePinModal() {
+  const { value: pin } = await Swal.fire({
+    title: 'Configurar PIN de 4 dígitos',
+    input: 'password',
+    inputAttributes: { maxlength: 4, inputmode: 'numeric', pattern: '[0-9]*' },
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    showCancelButton: true,
+    confirmButtonText: 'Guardar',
+    cancelButtonText: 'Cancelar',
+    inputValidator: (value) => {
+      if (!value || value.length !== 4 || !/^\d{4}$/.test(value)) {
+        return 'El PIN debe tener exactamente 4 números.';
+      }
+    }
+  });
+
+  if (pin) {
+    await security.savePin(state.user.id, pin);
+    showToast('PIN guardado exitosamente', { type: 'success' });
+  }
+}
+
+async function openSecurityModal() {
+  const hasPin = security.hasPinConfigured(state.user.id);
+  const hasBio = security.hasBiometricsConfigured(state.user.id);
+
+  await Swal.fire({
+    title: '⚙️ Seguridad y PIN',
+    background: 'var(--surface)',
+    color: 'var(--text)',
+    html: `
+      <div style="text-align:left; font-size: 0.9rem; display:flex; flex-direction:column; gap:1rem;">
+        <div>
+          <p style="margin-bottom:0.5rem;"><strong>PIN de Bloqueo (4 dígitos):</strong> ${hasPin ? '✅ Configurado' : '❌ No configurado'}</p>
+          <button type="button" class="btn small primary" id="swal-btn-pin">${hasPin ? 'Cambiar PIN' : 'Configurar PIN'}</button>
+          ${hasPin ? '<button type="button" class="btn small danger" id="swal-btn-remove-pin" style="margin-left:0.5rem;">Eliminar PIN</button>' : ''}
+        </div>
+        <hr style="border-color:var(--border, #334155); margin:0;">
+        <div>
+          <p style="margin-bottom:0.5rem;"><strong>Biometría / WebAuthn:</strong> ${hasBio ? '✅ Configurada' : '❌ No configurada'}</p>
+          ${hasPin ? `<button type="button" class="btn small ${hasBio ? 'danger' : 'success'}" id="swal-btn-bio">${hasBio ? 'Desactivar Biometría' : 'Activar Biometría'}</button>` : '<p style="font-size:0.8rem; color:var(--text-muted, #94a3b8);">Configura un PIN primero para activar la biometría.</p>'}
+        </div>
+      </div>
+    `,
+    showConfirmButton: false,
+    showCancelButton: true,
+    cancelButtonText: 'Cerrar',
+    didOpen: (popup) => {
+      $('#swal-btn-pin', popup)?.addEventListener('click', async () => {
+        Swal.close();
+        await configurePinModal();
+      });
+      $('#swal-btn-remove-pin', popup)?.addEventListener('click', async () => {
+        Swal.close();
+        security.removePin(state.user.id);
+        showToast('PIN eliminado', { type: 'info' });
+      });
+      $('#swal-btn-bio', popup)?.addEventListener('click', async () => {
+        Swal.close();
+        if (hasBio) {
+          security.disableBiometrics(state.user.id);
+          showToast('Biometría desactivada', { type: 'info' });
+        } else {
+          const registered = await security.registerBiometrics(state.user.id, state.user.email);
+          if (registered) showToast('Biometría activada correctamente', { type: 'success' });
+          else showToast('No se pudo activar la biometría en este dispositivo', { type: 'error' });
+        }
+      });
+    }
+  });
+}
+
+/* ------------------------------ Cántulos y Render ------------------------------ */
 function computeSummary() {
   const range = getPeriodRange('mes_actual');
   const rows = state.transactions.filter((t) => t.fecha >= range.from && t.fecha <= range.to);
@@ -273,7 +368,7 @@ function renderAll() {
   renderDebts();
 }
 
-/* Modales */
+/* ------------------------------ Modales ------------------------------ */
 async function openTransactionModal() {
   if (!state.categories.length) return openCategoryManager();
   const result = await Swal.fire({
@@ -436,9 +531,19 @@ function wireEvents() {
   $('#btn-debt')?.addEventListener('click', () => openDebtModal());
   $('#btn-categories')?.addEventListener('click', () => openCategoryManager());
 
-  $('#btn-lock-now')?.addEventListener('click', () => triggerLockScreen());
+  // Navegación superior
+  $('#btn-security-settings')?.addEventListener('click', () => openSecurityModal());
+  $('#btn-lock-now')?.addEventListener('click', () => {
+    if (!security.hasPinConfigured(state.user.id)) {
+      showToast('Configura un PIN primero para activar el bloqueo', { type: 'info' });
+      openSecurityModal();
+    } else {
+      triggerLockScreen();
+    }
+  });
   $('#btn-logout')?.addEventListener('click', async () => { await signOut(); window.location.replace('./index.html'); });
 
+  // Listas
   $('#goals-list')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-goal-action]');
     if (!btn) return;
@@ -468,15 +573,24 @@ function wireEvents() {
 
 async function init() {
   initStealthToggle($('#btn-stealth'));
+  setupPWA();
+
   const user = await requireAuth();
   if (!user) return;
   state.user = user;
+
   const navEmail = $('#nav-email');
   if (navEmail) navEmail.textContent = user.email ?? '';
+
   wireEvents();
-  if (security.isScreenLocked(state.user.id) && security.hasPinConfigured(state.user.id)) showLockOverlay();
+
+  if (security.isScreenLocked(state.user.id) && security.hasPinConfigured(state.user.id)) {
+    showLockOverlay();
+  }
+
   ['mousemove', 'keydown', 'touchstart'].forEach((evt) => window.addEventListener(evt, resetInactivityTimer, { passive: true }));
   resetInactivityTimer();
+
   await loadAll();
 }
 
