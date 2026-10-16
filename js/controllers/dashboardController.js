@@ -1,6 +1,6 @@
 // js/controllers/dashboardController.js — Panel principal
 import Swal from 'sweetalert2';
-import { requireSession } from '../guard.js';
+import { requireAuth } from '../utils/authGuard.js';
 import { signOut, onAuthChange } from '../services/authService.js';
 import * as budget from '../services/budgetService.js';
 import * as catService from '../services/categoryService.js';
@@ -971,7 +971,7 @@ function wireEvents() {
       } catch (error) {
         showToast(friendlyError(error), { type: 'error' });
       } finally {
-        window.location.replace('./login.html');
+        window.location.replace('./index.html');
       }
     })
   );
@@ -998,12 +998,13 @@ async function teardown() {
 async function init() {
   initStealthToggle($('#btn-stealth'));
 
-  const session = await requireSession();
-  if (!session) return;
+  // 1. Validar autenticación con el guardián modular
+  const user = await requireAuth();
+  if (!user) return; // Si no hay usuario activo, el guardián ya realiza la redirección a index.html
 
-  state.user = session.user;
-  $('#nav-email').textContent = session.user.email ?? '';
-  $('#nav-email').title = session.user.email ?? '';
+  state.user = user;
+  $('#nav-email').textContent = user.email ?? '';
+  $('#nav-email').title = user.email ?? '';
 
   state.ui = sanitizeUi(loadUiState(state.user.id));
   restoreControls();
@@ -1011,10 +1012,11 @@ async function init() {
 
   state.unsubAuth = onAuthChange((event) => {
     if (event === 'SIGNED_OUT') {
-      teardown().finally(() => window.location.replace('./login.html'));
+      teardown().finally(() => window.location.replace('./index.html'));
     }
   });
 
+  // 2. Carga de datos autorizados (token adjuntado automáticamente)
   await loadAll();
 
   state.channel = budget.subscribeToChanges(state.user.id, () => scheduleReload());

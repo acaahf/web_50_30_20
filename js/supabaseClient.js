@@ -1,5 +1,5 @@
 // js/supabaseClient.js — Instancia singleton del cliente Supabase (vía Import Map)
-import { createClient } from 'supabase';
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
 export const SUPABASE_URL = 'https://gckpjtilrabiufubpiea.supabase.co';
 export const SUPABASE_ANON_KEY = 'sb_publishable_AU8Du3akJm_lEUnepJ-qYQ_UIXC2urC';
