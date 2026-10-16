@@ -1,5 +1,5 @@
 // sw.js — Service Worker nativo: caché offline de la App Shell
-const CACHE_NAME = 'presupuesto-shell-v2';
+const CACHE_NAME = 'presupuesto-shell-v3';
 
 const APP_SHELL = [
   './',
@@ -13,6 +13,7 @@ const APP_SHELL = [
   './styles/dashboard.css',
   './js/supabaseClient.js',
   './js/guard.js',
+  './js/utils/authGuard.js',
   './js/services/authService.js',
   './js/services/budgetService.js',
   './js/services/categoryService.js',
@@ -49,16 +50,19 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Nunca cachear llamadas a la API de Supabase (datos siempre frescos)
+  // 1. Filtrar esquemas no soportados por la API Cache (chrome-extension://, moz-extension://, file://, etc.)
+  if (!url.protocol.startsWith('http')) return;
+
+  // 2. Nunca cachear llamadas a la API de Supabase (datos siempre frescos)
   if (url.hostname.endsWith('.supabase.co')) return;
 
-  // Mismo origen: cache-first con actualización en segundo plano (stale-while-revalidate)
+  // 3. Mismo origen: cache-first con actualización en segundo plano (stale-while-revalidate)
   if (url.origin === self.location.origin) {
     event.respondWith(
       caches.match(request).then((cached) => {
         const network = fetch(request)
           .then((response) => {
-            if (response?.ok) {
+            if (response?.ok && response.type === 'basic') {
               const copy = response.clone();
               caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
             }
@@ -71,7 +75,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // CDN ESM (librerías): network-first con respaldo en caché
+  // 4. CDN ESM (librerías externas): network-first con respaldo en caché
   event.respondWith(
     fetch(request)
       .then((response) => {
