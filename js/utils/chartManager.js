@@ -1,8 +1,5 @@
 // js/utils/chartManager.js — Gestor central de gráficos (Chart.js vía Import Map)
-import { Chart, registerables } from 'chart.js';
-
-// Registrar todos los componentes necesarios (doughnut, line, tooltip, leyenda, etc.)
-Chart.register(...registerables);
+import Chart from 'chart.js';
 
 const instances = new Map();
 
@@ -16,14 +13,16 @@ function getCanvasContext(canvas) {
     instances.get(id).destroy();
     instances.delete(id);
   }
-  Chart.getChart(canvas)?.destroy();
+  Chart.getChart?.(canvas)?.destroy();
   return { id, ctx: canvas.getContext('2d') };
 }
 
 function applyThemeDefaults() {
   const text = cssVar('--text', '#0f172a');
-  Chart.defaults.color = text;
-  Chart.defaults.font.family = cssVar('--font', 'system-ui, sans-serif');
+  if (Chart.defaults) {
+    Chart.defaults.color = text;
+    Chart.defaults.font.family = cssVar('--font', 'system-ui, sans-serif');
+  }
 }
 
 /** Dona concéntrica: anillo exterior = presupuesto ideal, anillo interior = gasto real. */
