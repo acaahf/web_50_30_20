@@ -11,7 +11,6 @@
     "imports": {
       "supabase": "https://esm.sh/@supabase/supabase-js@2.45.4",
       "sweetalert2": "https://esm.sh/sweetalert2@11.14.5",
-      "chart.js": "https://esm.sh/chart.js@4.4.4/auto",
       "jspdf": "https://esm.sh/jspdf@2.5.2"
     }
   }
@@ -45,76 +44,76 @@
       </div>
     </div>
 
-    <!-- Onboarding / Banner de advertencia -->
-    <section class="banner info" id="onboarding" hidden>
+    <!-- Banner de configuración de ingreso -->
+    <section class="card onboarding-banner no-print" id="onboarding" aria-labelledby="onb-title" hidden>
       <div>
-        <h2>👋 Configura tu ingreso mensual</h2>
+        <h2 id="onb-title" style="margin:0 0 .25rem">👋 Configura tu ingreso mensual</h2>
         <p>Define tu ingreso base y tu divisa para desbloquear el cálculo de tus topes 50/30/20.</p>
       </div>
       <button class="btn primary" id="btn-onboard" type="button">Configurar ahora</button>
     </section>
 
-    <!-- KPIs -->
-    <section class="kpis-grid" aria-label="Resumen de presupuesto">
-      <article class="kpi card skeleton" id="kpi-income">
-        <span class="kpi-label">Ingreso base</span>
-        <span class="kpi-value sensitive" data-field="value">$0.00</span>
-        <span class="kpi-cap" data-field="cap">Ingresos extra: $0.00</span>
-        <div class="progress" style="--pct:0%"></div>
-        <span class="kpi-left" data-field="left">Cargando…</span>
-      </article>
+    <!-- Leyenda de distribución -->
+    <ul class="card budget-legend" aria-label="Leyenda del presupuesto">
+      <li><span class="dot needs" aria-hidden="true"></span>🔵 50% Necesidades Básicas</li>
+      <li><span class="dot wants" aria-hidden="true"></span>🟣 30% Deseos y Estilo de Vida</li>
+      <li><span class="dot save" aria-hidden="true"></span>🟢 20% Ahorro e Inversión</li>
+      <li><span class="dot over" aria-hidden="true"></span>🔴 Exceso / Sobrepresupuesto</li>
+    </ul>
 
-      <article class="kpi card skeleton" id="kpi-needs">
-        <span class="kpi-label">50% Necesidades</span>
-        <span class="kpi-value sensitive" data-field="value">$0.00</span>
-        <span class="kpi-cap" data-field="cap">Tope 50%</span>
-        <div class="progress" style="--pct:0%"></div>
-        <span class="kpi-left" data-field="left">Cargando…</span>
-      </article>
+    <!-- Tarjetas KPI en cuadrícula horizontal de 4 columnas -->
+    <section aria-label="Indicadores del presupuesto">
+      <div class="kpi-grid">
+        <article class="card kpi income skeleton" id="kpi-income">
+          <span class="kpi-title">Ingreso base</span>
+          <span class="kpi-value sensitive" data-field="value">$0.00</span>
+          <span class="kpi-cap sensitive" data-field="cap">Extra: $0.00</span>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          <span class="kpi-left sensitive" data-field="left">Cargando…</span>
+        </article>
 
-      <article class="kpi card skeleton" id="kpi-wants">
-        <span class="kpi-label">30% Deseos</span>
-        <span class="kpi-value sensitive" data-field="value">$0.00</span>
-        <span class="kpi-cap" data-field="cap">Tope 30%</span>
-        <div class="progress" style="--pct:0%"></div>
-        <span class="kpi-left" data-field="left">Cargando…</span>
-      </article>
+        <article class="card kpi needs skeleton" id="kpi-needs">
+          <span class="kpi-title">50% Necesidades</span>
+          <span class="kpi-value sensitive" data-field="value">$0.00</span>
+          <span class="kpi-cap sensitive" data-field="cap">Tope 50%</span>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          <span class="kpi-left sensitive" data-field="left">Cargando…</span>
+        </article>
 
-      <article class="kpi card skeleton" id="kpi-save">
-        <span class="kpi-label">20% Ahorro</span>
-        <span class="kpi-value sensitive" data-field="value">$0.00</span>
-        <span class="kpi-cap" data-field="cap">Tope 20%</span>
-        <div class="progress" style="--pct:0%"></div>
-        <span class="kpi-left" data-field="left">Cargando…</span>
-      </article>
+        <article class="card kpi wants skeleton" id="kpi-wants">
+          <span class="kpi-title">30% Deseos</span>
+          <span class="kpi-value sensitive" data-field="value">$0.00</span>
+          <span class="kpi-cap sensitive" data-field="cap">Tope 30%</span>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          <span class="kpi-left sensitive" data-field="left">Cargando…</span>
+        </article>
+
+        <article class="card kpi save skeleton" id="kpi-save">
+          <span class="kpi-title">20% Ahorro</span>
+          <span class="kpi-value sensitive" data-field="value">$0.00</span>
+          <span class="kpi-cap sensitive" data-field="cap">Tope 20%</span>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+          <span class="kpi-left sensitive" data-field="left">Cargando…</span>
+        </article>
+      </div>
     </section>
 
-    <!-- Gráfico principal -->
-    <section class="card chart-card">
-      <div class="chart-head">
-        <h2>Distribución del Presupuesto</h2>
-      </div>
-      <div class="chart-container">
-        <canvas id="budget-chart"></canvas>
-      </div>
-    </section>
-
-    <!-- Metas y Deudas -->
-    <div class="grid-2">
-      <section class="card">
-        <div class="card-head">
-          <h2>Metas e Inversiones (20% Ahorro)</h2>
-          <button class="btn small primary no-print" id="btn-goal" type="button">＋ Meta</button>
+    <!-- Metas y Deudas organizadas en 2 columnas paralelas -->
+    <div class="panels">
+      <section class="card goals" aria-labelledby="goals-title">
+        <div class="goal-head">
+          <h2 id="goals-title" style="margin: 0;">📈 Ahorro e Inversiones</h2>
+          <button class="btn small no-print" id="btn-goal" type="button">＋ Meta</button>
         </div>
-        <div id="goals-list" class="goals-list"></div>
+        <div id="goals-list" aria-live="polite"></div>
       </section>
 
-      <section class="card">
-        <div class="card-head">
-          <h2>Deudas y Amortizaciones</h2>
-          <button class="btn small primary no-print" id="btn-debt" type="button">＋ Deuda</button>
+      <section class="card debts" aria-labelledby="debts-title">
+        <div class="goal-head">
+          <h2 id="debts-title" style="margin: 0;">💳 Control de Deudas</h2>
+          <button class="btn small no-print" id="btn-debt" type="button">＋ Deuda</button>
         </div>
-        <div id="debts-list" class="goals-list"></div>
+        <div id="debts-list" aria-live="polite"></div>
       </section>
     </div>
   </main>
