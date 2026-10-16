@@ -1,4 +1,4 @@
-// js/controllers/dashboardController.js — Panel Principal (Seguridad y KPIs sin PWA)
+// js/controllers/dashboardController.js — Panel Principal (KPIs, Metas, Deudas y Seguridad)
 import Swal from 'sweetalert2';
 import { requireAuth } from '../utils/authGuard.js';
 import { signOut } from '../services/authService.js';
@@ -13,8 +13,7 @@ import {
   initStealthToggle,
   roundMoney,
   showToast,
-  sumMoney,
-  toISODate
+  sumMoney
 } from '../utils/helpers.js';
 
 const RULES = {
@@ -23,7 +22,6 @@ const RULES = {
   ahorro: { label: 'Ahorro', pct: 20 }
 };
 const RULE_KEYS = Object.keys(RULES);
-const METHODS = { efectivo: 'Efectivo', debito: 'Débito', credito: 'Crédito', transferencia: 'Transferencia' };
 const CURRENCIES = ['USD', 'EUR', 'COP', 'MXN', 'ARS', 'CLP', 'PEN', 'BRL', 'UYU', 'BOB', 'PYG', 'GTQ', 'CRC', 'DOP', 'GBP', 'CAD'];
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -345,52 +343,6 @@ function renderAll() {
 }
 
 /* ------------------------------ Modales ------------------------------ */
-async function openTransactionModal() {
-  if (!state.categories.length) return openCategoryManager();
-  const result = await Swal.fire({
-    title: 'Nueva transacción',
-    background: 'var(--surface)', color: 'var(--text)',
-    html: `<form class="swal-form" id="tx-form">
-      <label>Concepto <input id="tx-concepto" type="text" required placeholder="Ej. Supermercado"></label>
-      <div class="row">
-        <label>Monto <input id="tx-monto" type="number" step="0.01" min="0.01" required placeholder="0.00"></label>
-        <label>Tipo <select id="tx-tipo"><option value="gasto">Gasto</option><option value="ingreso">Ingreso</option></select></label>
-      </div>
-      <div id="tx-category-row">
-        <label>Categoría <select id="tx-detalle">${state.categories.map(c => `<option value="${escapeHTML(c.nombre)}" data-rule="${c.categoria_503020}">${escapeHTML(c.nombre)}</option>`).join('')}</select></label>
-      </div>
-      <div class="row">
-        <label>Pago <select id="tx-metodo">${Object.entries(METHODS).map(([k, val]) => `<option value="${k}">${val}</option>`).join('')}</select></label>
-        <label>Fecha <input id="tx-fecha" type="date" required value="${toISODate(new Date())}"></label>
-      </div>
-    </form>`,
-    showCancelButton: true,
-    preConfirm: async () => {
-      const popup = Swal.getPopup();
-      const concepto = $('#tx-concepto', popup).value.trim();
-      const monto = Number($('#tx-monto', popup).value);
-      const tipo = $('#tx-tipo', popup).value;
-      const fecha = $('#tx-fecha', popup).value;
-      const opt = $('#tx-detalle', popup).selectedOptions[0];
-
-      if (!concepto || !monto || monto <= 0) return Swal.showValidationMessage('Campos requeridos vacíos');
-
-      const payload = {
-        concepto, monto: roundMoney(monto), tipo,
-        categoria_503020: tipo === 'ingreso' ? 'necesidades' : opt.dataset.rule,
-        categoria_detalle: tipo === 'ingreso' ? 'Ingreso' : opt.value,
-        metodo_pago: $('#tx-metodo', popup).value, fecha
-      };
-      return await budget.createTransaction(payload);
-    }
-  });
-
-  if (result.isConfirmed) {
-    showToast('Transacción creada', { type: 'success' });
-    await loadAll();
-  }
-}
-
 async function openIncomeModal() {
   const result = await Swal.fire({
     title: 'Ingreso mensual y divisa',
@@ -469,18 +421,6 @@ async function openDebtModal(debt = null) {
   }
 }
 
-async function openCategoryManager() {
-  await Swal.fire({
-    title: 'Categorías',
-    background: 'var(--surface)', color: 'var(--text)',
-    html: `<div style="text-align:left;">
-      <p style="font-size:0.85rem;">Las categorías se administran en tus transacciones.</p>
-      <ul>${state.categories.map(c => `<li><strong>${escapeHTML(c.nombre)}</strong> (${c.categoria_503020})</li>`).join('')}</ul>
-    </div>`,
-    confirmButtonText: 'Cerrar'
-  });
-}
-
 async function loadAll() {
   try {
     const from = `${new Date().getFullYear() - 1}-12-01`;
@@ -500,12 +440,9 @@ async function loadAll() {
 }
 
 function wireEvents() {
-  $('#btn-add')?.addEventListener('click', () => openTransactionModal());
-  $('#btn-income')?.addEventListener('click', () => openIncomeModal());
   $('#btn-onboard')?.addEventListener('click', () => openIncomeModal());
   $('#btn-goal')?.addEventListener('click', () => openGoalModal());
   $('#btn-debt')?.addEventListener('click', () => openDebtModal());
-  $('#btn-categories')?.addEventListener('click', () => openCategoryManager());
 
   // Navegación superior
   $('#btn-security-settings')?.addEventListener('click', () => openSecurityModal());
