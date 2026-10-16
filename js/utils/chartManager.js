@@ -1,48 +1,47 @@
-// js/utils/chartManager.js — Gestor central de gráficos (Chart.js vía Import Map)
-import Chart from 'chart.js';
+// js/utils/chartManager.js — Gestor central de gráficos (Chart.js /auto vía Import Map)
+import ChartModule from 'chart.js';
 
-// js/utils/chartManager.js — Gestor central de gráficos (Chart.js UMD)
+// Adaptador para resolver importación por defecto o nombrada
+const Chart = ChartModule.Chart || ChartModule.default || ChartModule;
+
 const instances = new Map();
-
-const getChartClass = () => window.Chart || globalThis.Chart;
 
 const cssVar = (name, fallback) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
 function getCanvasContext(canvas) {
   if (!canvas) return null;
-  const ChartClass = getChartClass();
   const id = canvas.id || 'default-canvas';
   if (instances.has(id)) {
     instances.get(id).destroy();
     instances.delete(id);
   }
-  if (ChartClass?.getChart) {
-    ChartClass.getChart(canvas)?.destroy();
+  if (Chart?.getChart) {
+    Chart.getChart(canvas)?.destroy();
   }
-  return { id, ctx: canvas.getContext('2d'), ChartClass };
+  return { id, ctx: canvas.getContext('2d') };
 }
 
-function applyThemeDefaults(ChartClass) {
+function applyThemeDefaults() {
   const text = cssVar('--text', '#0f172a');
-  if (ChartClass?.defaults) {
-    ChartClass.defaults.color = text;
-    ChartClass.defaults.font.family = cssVar('--font', 'system-ui, sans-serif');
+  if (Chart?.defaults) {
+    Chart.defaults.color = text;
+    Chart.defaults.font.family = cssVar('--font', 'system-ui, sans-serif');
   }
 }
 
 /** Dona concéntrica: anillo exterior = presupuesto ideal, anillo interior = gasto real. */
 export function renderBudgetChart(canvas, config) {
   if (!canvas) return null;
-  const { id, ctx, ChartClass } = getCanvasContext(canvas);
-  if (!ChartClass) return null;
-  applyThemeDefaults(ChartClass);
+  const { id, ctx } = getCanvasContext(canvas);
+  if (!ctx || !Chart) return null;
+  applyThemeDefaults();
 
   const { labels, colors, ideal, actual, over = [], formatter, idealAsPercent = false } = config;
   const text = cssVar('--text', '#0f172a');
   const surface = cssVar('--surface', '#ffffff');
 
-  const chart = new ChartClass(ctx, {
+  const chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
@@ -89,13 +88,13 @@ export function renderBudgetChart(canvas, config) {
 /** Gráfico de líneas: tendencia de ingresos vs. gastos */
 export function renderTrendChart(canvas, config) {
   if (!canvas) return null;
-  const { id, ctx, ChartClass } = getCanvasContext(canvas);
-  if (!ChartClass) return null;
-  applyThemeDefaults(ChartClass);
+  const { id, ctx } = getCanvasContext(canvas);
+  if (!ctx || !Chart) return null;
+  applyThemeDefaults();
 
   const { labels, incomes, expenses, formatter } = config;
 
-  const chart = new ChartClass(ctx, {
+  const chart = new Chart(ctx, {
     type: 'line',
     data: {
       labels,
@@ -150,14 +149,14 @@ export function renderTrendChart(canvas, config) {
 /** Gráfico de dona: desglose de gastos por categoría individual */
 export function renderCategoryDoughnutChart(canvas, config) {
   if (!canvas) return null;
-  const { id, ctx, ChartClass } = getCanvasContext(canvas);
-  if (!ChartClass) return null;
-  applyThemeDefaults(ChartClass);
+  const { id, ctx } = getCanvasContext(canvas);
+  if (!ctx || !Chart) return null;
+  applyThemeDefaults();
 
   const { labels, data, colors, formatter } = config;
   const surface = cssVar('--surface', '#ffffff');
 
-  const chart = new ChartClass(ctx, {
+  const chart = new Chart(ctx, {
     type: 'doughnut',
     data: {
       labels,
