@@ -304,5 +304,42 @@ function registerServiceWorker() {
   });
 }
 
+/* ------------------------------------------------------------------ */
+/* Modo Claro / Oscuro (Theme Toggle)                                  */
+/* ------------------------------------------------------------------ */
+const THEME_KEY = 'presupuesto:theme';
+
+export function getTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY) || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  } catch {
+    return 'dark';
+  }
+}
+
+export function applyTheme(theme = getTheme(), button = null) {
+  document.documentElement.setAttribute('data-theme', theme);
+  if (button) {
+    button.textContent = theme === 'light' ? '🌙' : '☀️';
+    button.setAttribute('aria-label', theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro');
+    button.setAttribute('title', theme === 'light' ? 'Cambiar a modo oscuro' : 'Cambiar a modo claro');
+  }
+}
+
+export function initThemeToggle(button) {
+  applyTheme(getTheme(), button);
+  if (!button) return;
+  button.addEventListener('click', () => {
+    const current = document.documentElement.getAttribute('data-theme') || getTheme();
+    const next = current === 'light' ? 'dark' : 'light';
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {
+      /* ignorar */
+    }
+    applyTheme(next, button);
+  });
+}
+
 installGlobalHandlers();
 registerServiceWorker();

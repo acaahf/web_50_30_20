@@ -348,3 +348,32 @@ textarea {
 @media print {
   .toast-container { display: none !important; }
 }
+
+/* ---------- Modos Claro / Oscuro explícitos ---------- */
+[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f1f5f9;
+  --surface: #ffffff;
+  --surface-2: #f8fafc;
+  --text: #0f172a;
+  --text-muted: #475569;
+  --border: #e2e8f0;
+  --shadow: 0 1px 3px rgb(15 23 42 / 0.08), 0 4px 14px rgb(15 23 42 / 0.06);
+  --skeleton-a: #e2e8f0;
+  --skeleton-b: #f1f5f9;
+  --focus: #0284c7;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --surface: #131c2e;
+  --surface-2: #19243a;
+  --text: #e8eefb;
+  --text-muted: #9fb0cc;
+  --border: #26344f;
+  --shadow: 0 1px 3px rgb(0 0 0 / 0.5), 0 6px 20px rgb(0 0 0 / 0.35);
+  --skeleton-a: #1d2a44;
+  --skeleton-b: #26344f;
+  --focus: #38bdf8;
+}

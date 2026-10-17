@@ -12,6 +12,7 @@ import {
   friendlyError,
   getPeriodRange,
   initStealthToggle,
+  initThemeToggle,
   roundMoney,
   showToast,
   toISODate
@@ -644,6 +645,7 @@ function wireEvents() {
 
 async function init() {
   initStealthToggle($('#btn-stealth'));
+  initThemeToggle($('#btn-theme-toggle'));
 
   const user = await requireAuth();
   if (!user) return;
