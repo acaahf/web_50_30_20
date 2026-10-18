@@ -13,6 +13,7 @@ import {
   getPeriodRange,
   initStealthToggle,
   initThemeToggle,
+  parseMoneyInput,
   roundMoney,
   showToast,
   toISODate
@@ -227,7 +228,6 @@ function applyFilters() {
     );
   }
 
-  // Ordenación
   filtered.sort((a, b) => {
     let valA = a[state.sortField];
     let valB = b[state.sortField];
@@ -284,9 +284,8 @@ function renderTable() {
   $('#page-next').disabled = state.currentPage >= totalPages;
 }
 
-/* ------------------------------ Funciones de Botones ------------------------------ */
+/* ------------------------------ Modales ------------------------------ */
 
-// 1. Agregar Transacción
 async function openTransactionModal(tx = null) {
   const isEdit = Boolean(tx);
   if (!state.categories.length) state.categories = await catService.listCategories();
@@ -297,7 +296,7 @@ async function openTransactionModal(tx = null) {
     html: `<form class="swal-form" id="tx-form">
       <label>Concepto <input id="tx-concepto" type="text" required value="${escapeHTML(tx?.concepto ?? '')}" placeholder="Ej. Supermercado"></label>
       <div class="row">
-        <label>Monto <input id="tx-monto" type="number" step="0.01" min="0.01" required value="${tx?.monto ?? ''}" placeholder="0.00"></label>
+        <label>Monto <input id="tx-monto" type="text" inputmode="decimal" required value="${tx?.monto ?? ''}" placeholder="Ej. 1.000.000,00"></label>
         <label>Tipo <select id="tx-tipo">
           <option value="gasto"${tx?.tipo === 'gasto' ? ' selected' : ''}>Gasto</option>
           <option value="ingreso"${tx?.tipo === 'ingreso' ? ' selected' : ''}>Ingreso</option>
@@ -315,12 +314,12 @@ async function openTransactionModal(tx = null) {
     preConfirm: async () => {
       const popup = Swal.getPopup();
       const concepto = $('#tx-concepto', popup).value.trim();
-      const monto = Number($('#tx-monto', popup).value);
+      const monto = parseMoneyInput($('#tx-monto', popup).value);
       const tipo = $('#tx-tipo', popup).value;
       const fecha = $('#tx-fecha', popup).value;
       const opt = $('#tx-detalle', popup).selectedOptions[0];
 
-      if (!concepto || !monto || monto <= 0) return Swal.showValidationMessage('Campos requeridos vacíos');
+      if (!concepto || !monto || monto <= 0) return Swal.showValidationMessage('Ingresa un monto válido');
 
       const payload = {
         concepto, monto: roundMoney(monto), tipo,
@@ -338,19 +337,18 @@ async function openTransactionModal(tx = null) {
   }
 }
 
-// 2. Ingreso y Divisa
 async function openIncomeModal() {
   const result = await Swal.fire({
     title: 'Ingreso mensual y divisa',
     background: 'var(--surface)', color: 'var(--text)',
     html: `<form class="swal-form" id="income-form">
-      <label>Ingreso mensual base <input id="inc-monto" type="number" step="0.01" min="0.01" value="${state.profile.monthly_income || ''}" required></label>
+      <label>Ingreso mensual base <input id="inc-monto" type="text" inputmode="decimal" value="${state.profile.monthly_income || ''}" required placeholder="Ej. 2.500.000"></label>
       <label>Divisa <select id="inc-currency">${CURRENCIES.map(c => `<option value="${c}"${c === state.profile.currency ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
     </form>`,
     showCancelButton: true,
     preConfirm: async () => {
       const popup = Swal.getPopup();
-      const monthly_income = Number($('#inc-monto', popup).value);
+      const monthly_income = parseMoneyInput($('#inc-monto', popup).value);
       if (!monthly_income || monthly_income <= 0) return Swal.showValidationMessage('Ingresa un valor válido');
       return await budget.updateProfile(state.user.id, { monthly_income, currency: $('#inc-currency', popup).value });
     }
@@ -363,7 +361,6 @@ async function openIncomeModal() {
   }
 }
 
-// 3. Copiar Recurrentes
 async function cloneRecurrentTransactions() {
   const prevRange = getPeriodRange('mes_anterior');
   const prevTxs = state.transactions.filter((t) => t.fecha >= prevRange.from && t.fecha <= prevRange.to && t.tipo === 'gasto');
@@ -399,7 +396,6 @@ async function cloneRecurrentTransactions() {
   }
 }
 
-// 4. Gestión de Categorías
 async function openCategoryManager() {
   const renderCatList = () =>
     state.categories
@@ -464,7 +460,6 @@ async function openCategoryManager() {
   await loadAll();
 }
 
-// 5. Exportar CSV
 function exportCSV() {
   if (!state.filteredTransactions.length) {
     showToast('No hay transacciones para exportar', { type: 'info' });
@@ -492,7 +487,6 @@ function exportCSV() {
   showToast('Archivo CSV descargado', { type: 'success' });
 }
 
-// 6. Exportar PDF
 function exportPDF() {
   if (!state.filteredTransactions.length) {
     showToast('No hay transacciones para exportar', { type: 'info' });
@@ -554,7 +548,6 @@ async function loadAll() {
     state.transactions = transactions;
     state.categories = userCategories;
 
-    // Llenar selector de categorías en filtros
     const catSelect = $('#f-category');
     if (catSelect) {
       catSelect.innerHTML = '<option value="todas">Todas</option>' + userCategories.map((c) => `<option value="${escapeHTML(c.nombre)}">${escapeHTML(c.nombre)}</option>`).join('');
@@ -567,7 +560,6 @@ async function loadAll() {
 }
 
 function wireEvents() {
-  // Botones de Acción
   $('#btn-add')?.addEventListener('click', () => openTransactionModal());
   $('#btn-income')?.addEventListener('click', () => openIncomeModal());
   $('#btn-clone')?.addEventListener('click', () => cloneRecurrentTransactions());
@@ -575,7 +567,6 @@ function wireEvents() {
   $('#btn-csv')?.addEventListener('click', () => exportCSV());
   $('#btn-pdf')?.addEventListener('click', () => exportPDF());
 
-  // Navegación y Seguridad
   $('#btn-security-settings')?.addEventListener('click', () => openSecurityModal());
   $('#btn-lock-now')?.addEventListener('click', () => {
     if (!security.hasPinConfigured(state.user.id)) {
@@ -590,13 +581,11 @@ function wireEvents() {
     window.location.replace('./index.html');
   });
 
-  // Filtros
   ['f-search', 'f-rule', 'f-category', 'f-method', 'f-period'].forEach((id) => {
     $(`#${id}`)?.addEventListener('input', applyFilters);
     $(`#${id}`)?.addEventListener('change', applyFilters);
   });
 
-  // Paginación
   $('#page-size')?.addEventListener('change', (e) => {
     state.pageSize = Number(e.target.value);
     state.currentPage = 1;
@@ -616,7 +605,6 @@ function wireEvents() {
     }
   });
 
-  // Acciones en la tabla (Editar / Eliminar)
   $('#tx-body')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-tx-action]');
     if (!btn) return;

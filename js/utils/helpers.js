@@ -341,5 +341,33 @@ export function initThemeToggle(button) {
   });
 }
 
+/**
+ * Convierte cualquier cadena de texto ingresada por el usuario (con puntos o comas)
+ * a un número de punto flotante válido para la base de datos.
+ * Ejemplos: "1.000.000" -> 1000000 | "1.000.000,50" -> 1000000.5
+ */
+export function parseMoneyInput(val) {
+  if (val === null || val === undefined) return 0;
+  let str = String(val).trim();
+  if (!str) return 0;
+
+  if ((str.match(/\./g) || []).length > 1) {
+    str = str.replace(/\./g, '').replace(',', '.');
+  } else if ((str.match(/,/g) || []).length > 1) {
+    str = str.replace(/,/g, '');
+  } else if (str.includes('.') && str.includes(',')) {
+    if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
+      str = str.replace(/\./g, '').replace(',', '.');
+    } else {
+      str = str.replace(/,/g, '');
+    }
+  } else if (str.includes(',') && !str.includes('.')) {
+    str = str.replace(',', '.');
+  }
+
+  const num = Number(str);
+  return isNaN(num) ? 0 : num;
+}
+
 installGlobalHandlers();
 registerServiceWorker();

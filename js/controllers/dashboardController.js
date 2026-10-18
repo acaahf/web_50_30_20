@@ -12,6 +12,7 @@ import {
   getPeriodRange,
   initStealthToggle,
   initThemeToggle,
+  parseMoneyInput,
   roundMoney,
   showToast,
   sumMoney
@@ -349,13 +350,13 @@ async function openIncomeModal() {
     title: 'Ingreso mensual y divisa',
     background: 'var(--surface)', color: 'var(--text)',
     html: `<form class="swal-form" id="income-form">
-      <label>Ingreso mensual base <input id="inc-monto" type="number" step="0.01" min="0.01" value="${state.profile.monthly_income || ''}" required></label>
+      <label>Ingreso mensual base <input id="inc-monto" type="text" inputmode="decimal" value="${state.profile.monthly_income || ''}" required placeholder="Ej. 2.500.000"></label>
       <label>Divisa <select id="inc-currency">${CURRENCIES.map(c => `<option value="${c}"${c === state.profile.currency ? ' selected' : ''}>${c}</option>`).join('')}</select></label>
     </form>`,
     showCancelButton: true,
     preConfirm: async () => {
       const popup = Swal.getPopup();
-      const monthly_income = Number($('#inc-monto', popup).value);
+      const monthly_income = parseMoneyInput($('#inc-monto', popup).value);
       if (!monthly_income || monthly_income <= 0) return Swal.showValidationMessage('Ingresa un valor válido');
       return await budget.updateProfile(state.user.id, { monthly_income, currency: $('#inc-currency', popup).value });
     }
@@ -375,13 +376,13 @@ async function openGoalModal(goal = null) {
     background: 'var(--surface)', color: 'var(--text)',
     html: `<form class="swal-form" id="goal-form">
       <label>Nombre <input id="goal-nombre" type="text" required value="${escapeHTML(goal?.nombre ?? '')}"></label>
-      <label>Monto objetivo <input id="goal-monto" type="number" step="0.01" min="0.01" required value="${escapeHTML(goal?.monto_objetivo ?? '')}"></label>
+      <label>Monto objetivo <input id="goal-monto" type="text" inputmode="decimal" required value="${escapeHTML(goal?.monto_objetivo ?? '')}" placeholder="Ej. 5.000.000"></label>
     </form>`,
     showCancelButton: true,
     preConfirm: async () => {
       const popup = Swal.getPopup();
       const nombre = $('#goal-nombre', popup).value.trim();
-      const monto = Number($('#goal-monto', popup).value);
+      const monto = parseMoneyInput($('#goal-monto', popup).value);
       if (!nombre || !monto || monto <= 0) return Swal.showValidationMessage('Completa los campos');
       return isEdit ? await budget.updateGoal(goal.id, { nombre, monto_objetivo: roundMoney(monto) }) : await budget.createGoal({ nombre, monto_objetivo: roundMoney(monto) });
     }
@@ -401,16 +402,16 @@ async function openDebtModal(debt = null) {
     html: `<form class="swal-form" id="debt-form">
       <label>Nombre <input id="debt-nombre" type="text" required value="${escapeHTML(debt?.nombre ?? '')}"></label>
       <div class="row">
-        <label>Monto total <input id="debt-total" type="number" step="0.01" min="0.01" required value="${escapeHTML(debt?.monto_total ?? '')}"></label>
-        <label>Monto pagado <input id="debt-pagado" type="number" step="0.01" min="0" value="${escapeHTML(debt?.monto_pagado ?? 0)}"></label>
+        <label>Monto total <input id="debt-total" type="text" inputmode="decimal" required value="${escapeHTML(debt?.monto_total ?? '')}" placeholder="Ej. 1.200.000"></label>
+        <label>Monto pagado <input id="debt-pagado" type="text" inputmode="decimal" value="${escapeHTML(debt?.monto_pagado ?? 0)}"></label>
       </div>
     </form>`,
     showCancelButton: true,
     preConfirm: async () => {
       const popup = Swal.getPopup();
       const nombre = $('#debt-nombre', popup).value.trim();
-      const total = Number($('#debt-total', popup).value);
-      const pagado = Number($('#debt-pagado', popup).value) || 0;
+      const total = parseMoneyInput($('#debt-total', popup).value);
+      const pagado = parseMoneyInput($('#debt-pagado', popup).value);
       if (!nombre || !total || total <= 0) return Swal.showValidationMessage('Ingresa datos válidos');
       return isEdit ? await budget.updateDebt(debt.id, { nombre, monto_total: roundMoney(total), monto_pagado: roundMoney(pagado) }) : await budget.createDebt({ nombre, monto_total: roundMoney(total), monto_pagado: roundMoney(pagado) });
     }
@@ -445,7 +446,6 @@ function wireEvents() {
   $('#btn-goal')?.addEventListener('click', () => openGoalModal());
   $('#btn-debt')?.addEventListener('click', () => openDebtModal());
 
-  // Navegación superior
   $('#btn-security-settings')?.addEventListener('click', () => openSecurityModal());
   $('#btn-lock-now')?.addEventListener('click', () => {
     if (!security.hasPinConfigured(state.user.id)) {
@@ -457,7 +457,6 @@ function wireEvents() {
   });
   $('#btn-logout')?.addEventListener('click', async () => { await signOut(); window.location.replace('./index.html'); });
 
-  // Listas
   $('#goals-list')?.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-goal-action]');
     if (!btn) return;
