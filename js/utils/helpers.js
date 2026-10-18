@@ -342,27 +342,48 @@ export function initThemeToggle(button) {
 }
 
 /**
- * Convierte cualquier cadena de texto ingresada por el usuario (con puntos o comas)
- * a un número de punto flotante válido para la base de datos.
- * Ejemplos: "1.000.000" -> 1000000 | "1.000.000,50" -> 1000000.5
+ * Procesa montos con separadores de miles (puntos) y decimales (coma o punto).
+ * Ejemplos aceptados:
+ * - "1.000"        -> 1000
+ * - "50.000"       -> 50000
+ * - "1.000.000"    -> 1000000
+ * - "1.000.000,50" -> 1000000.5
  */
+
 export function parseMoneyInput(val) {
   if (val === null || val === undefined) return 0;
-  let str = String(val).trim();
+  let str = String(val).trim().replace(/[^0-9.,-]/g, '');
   if (!str) return 0;
 
-  if ((str.match(/\./g) || []).length > 1) {
-    str = str.replace(/\./g, '').replace(',', '.');
-  } else if ((str.match(/,/g) || []).length > 1) {
-    str = str.replace(/,/g, '');
-  } else if (str.includes('.') && str.includes(',')) {
+  // 1. Si contiene tanto punto como coma (ej. "1.000.000,50")
+  if (str.includes('.') && str.includes(',')) {
     if (str.lastIndexOf(',') > str.lastIndexOf('.')) {
       str = str.replace(/\./g, '').replace(',', '.');
     } else {
       str = str.replace(/,/g, '');
     }
-  } else if (str.includes(',') && !str.includes('.')) {
-    str = str.replace(',', '.');
+  } 
+  // 2. Si solo contiene comas (ej. "1000,50")
+  else if (str.includes(',') && !str.includes('.')) {
+    const parts = str.split(',');
+    if (parts.length > 2) {
+      str = str.replace(/,/g, '');
+    } else {
+      str = str.replace(',', '.');
+    }
+  } 
+  // 3. Si solo contiene puntos (ej. "1.000", "50.000", "1.000.000" o "10.50")
+  else if (str.includes('.') && !str.includes(',')) {
+    const dotCount = (str.match(/\./g) || []).length;
+    if (dotCount > 1) {
+      str = str.replace(/\./g, '');
+    } else {
+      const parts = str.split('.');
+      // Si tiene exactamente 3 dígitos tras el punto (ej. 1.000 o 50.000), es separador de miles
+      if (parts[1].length === 3) {
+        str = str.replace('.', '');
+      }
+    }
   }
 
   const num = Number(str);
