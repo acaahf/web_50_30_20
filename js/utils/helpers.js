@@ -269,7 +269,7 @@ export async function withLoading(button, task) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Manejadores globales de red / errores y Service Worker              */
+/* Manejadores globales de red y desinstalación de Service Worker     */
 /* ------------------------------------------------------------------ */
 function installGlobalHandlers() {
   if (window.__presupuestoHandlers) return;
@@ -297,11 +297,15 @@ function installGlobalHandlers() {
   if (!navigator.onLine) window.dispatchEvent(new Event('offline'));
 }
 
-function registerServiceWorker() {
-  if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((err) => console.warn('SW no registrado:', err));
-  });
+// Desregistrar cualquier Service Worker viejo que haya quedado activo
+function unregisterOldServiceWorkers() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.getRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+      }
+    });
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -349,7 +353,6 @@ export function initThemeToggle(button) {
  * - "1.000.000"    -> 1000000
  * - "1.000.000,50" -> 1000000.5
  */
-
 export function parseMoneyInput(val) {
   if (val === null || val === undefined) return 0;
   let str = String(val).trim().replace(/[^0-9.,-]/g, '');
@@ -391,4 +394,4 @@ export function parseMoneyInput(val) {
 }
 
 installGlobalHandlers();
-registerServiceWorker();
+unregisterOldServiceWorkers();
