@@ -13,7 +13,7 @@ async function hashPin(pin) {
     .join('');
 }
 
-export async function setPin(userId, pin) {
+export async function savePin(userId, pin) {
   if (!/^\d{4}$/.test(pin)) {
     throw new Error('El PIN debe contener exactamente 4 dígitos numéricos.');
   }
@@ -32,11 +32,13 @@ export function hasPinConfigured(userId) {
   return Boolean(localStorage.getItem(`${PIN_PREFIX}${userId}`));
 }
 
-export function removeSecurity(userId) {
+export function removePin(userId) {
   localStorage.removeItem(`${PIN_PREFIX}${userId}`);
-  localStorage.removeItem(`${BIO_PREFIX}${userId}`);
+  localStorage.removeItem(`${BIO_PREFIX}${userId}`); // Al borrar el PIN, quitamos la biometría por seguridad
   unlockScreen(userId);
 }
+
+/* --- Biometría (WebAuthn) --- */
 
 export async function isBiometricsSupported() {
   return Boolean(
@@ -85,6 +87,10 @@ export function hasBiometricsConfigured(userId) {
   return Boolean(localStorage.getItem(`${BIO_PREFIX}${userId}`));
 }
 
+export function disableBiometrics(userId) {
+  localStorage.removeItem(`${BIO_PREFIX}${userId}`);
+}
+
 export async function verifyBiometrics(userId) {
   const credIdB64 = localStorage.getItem(`${BIO_PREFIX}${userId}`);
   if (!credIdB64) return false;
@@ -104,6 +110,8 @@ export async function verifyBiometrics(userId) {
 
   return Boolean(assertion);
 }
+
+/* --- Bloqueo de pantalla --- */
 
 export function isScreenLocked(userId) {
   return sessionStorage.getItem(`${LOCK_PREFIX}${userId}`) === 'true';
