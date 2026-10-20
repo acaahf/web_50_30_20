@@ -446,6 +446,46 @@ function wireEvents() {
   $('#btn-goal')?.addEventListener('click', () => openGoalModal());
   $('#btn-debt')?.addEventListener('click', () => openDebtModal());
 
+  $('#btn-onboard')?.addEventListener('click', () => openIncomeModal());
+  $('#btn-goal')?.addEventListener('click', () => openGoalModal());
+  $('#btn-debt')?.addEventListener('click', () => openDebtModal());
+
+  // Nuevo evento para borrar el ingreso base
+  $('#btn-delete-income')?.addEventListener('click', async () => {
+    const result = await Swal.fire({
+      title: '¿Borrar ingreso base?',
+      text: 'Tus topes de 50% (Necesidades), 30% (Deseos) y 20% (Ahorro) se reiniciarán a $0.',
+      icon: 'warning',
+      background: 'var(--surface)',
+      color: 'var(--text)',
+      showCancelButton: true,
+      confirmButtonColor: '#d33',
+      confirmButtonText: 'Sí, borrar',
+      cancelButtonText: 'Cancelar'
+    });
+
+    if (result.isConfirmed) {
+      try {
+        const btn = $('#btn-delete-income');
+        if (btn) btn.disabled = true;
+
+        // Actualiza el perfil en Supabase dejando el ingreso en 0
+        await budget.updateProfile(state.user.id, { monthly_income: 0 });
+        
+        // Actualiza el estado local y recarga la UI
+        state.profile.monthly_income = 0;
+        renderAll();
+        
+        showToast('Ingreso base reiniciado a $0', { type: 'success' });
+      } catch (error) {
+        showToast(friendlyError(error), { type: 'error' });
+      } finally {
+        const btn = $('#btn-delete-income');
+        if (btn) btn.disabled = false;
+      }
+    }
+  });
+
   $('#btn-security-settings')?.addEventListener('click', () => openSecurityModal());
   $('#btn-lock-now')?.addEventListener('click', () => {
     if (!security.hasPinConfigured(state.user.id)) {

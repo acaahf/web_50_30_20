@@ -89,7 +89,10 @@
     <section aria-label="Indicadores del presupuesto">
       <div class="kpi-grid">
         <article class="card kpi income skeleton" id="kpi-income">
-          <span class="kpi-title">Ingreso base</span>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+            <span class="kpi-title">Ingreso base</span>
+            <button class="btn icon ghost no-print" id="btn-delete-income" type="button" aria-label="Borrar ingreso base" title="Borrar ingreso base" style="padding: 0; font-size: 1.1rem; height: auto;">🗑️</button>
+          </div>
           <span class="kpi-value sensitive" data-field="value">$0.00</span>
           <span class="kpi-cap sensitive" data-field="cap">Extra: $0.00</span>
           <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
